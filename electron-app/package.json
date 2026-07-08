@@ -1,0 +1,24 @@
+{
+  "name": "flipper-bank-terminal",
+  "version": "1.0.0",
+  "description": "Desktop bank terminal interface communicating with Flipper Zero and a local SQLite3 C core library.",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "keywords": [
+    "flipperzero",
+    "bank",
+    "terminal",
+    "electron"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "ffi-napi": "^4.0.3",
+    "ref-napi": "^3.0.3"
+  },
+  "devDependencies": {
+    "electron": "^31.1.0"
+  }
+}
