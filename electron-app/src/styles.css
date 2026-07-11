@@ -44,11 +44,15 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+  -webkit-font-smoothing: none !important;
+  -moz-osx-font-smoothing: none !important;
+  font-smoothing: none !important;
+  text-rendering: optimizeSpeed !important;
 }
 
 body {
   font-family: var(--pixel-font-family);
-  font-size: 18px;
+  font-size: 16px;
   background-color: var(--bg-primary);
   color: var(--retro-dark);
   height: 100vh;
@@ -79,9 +83,16 @@ html, body, #app, #content, .page, .terminal-log {
   z-index: 2;
 }
 
+/* Force pixel-perfect crisp scaling across the entire app */
+#logo, canvas, img, .pixel-card, .pixel-card-btn, .keypad-btn, .pixel-input, .toggle-btn, .pixel-font, .info-val {
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+  -webkit-optimize-contrast;
+}
+
 .pixel-font {
   font-family: var(--pixel-font-family);
-  image-rendering: pixelated;
   letter-spacing: 0.5px;
 }
 
@@ -116,12 +127,20 @@ html, body, #app, #content, .page, .terminal-log {
 #brand {
   display: flex;
   align-items: center;
+  gap: 16px;
 }
 
 #logo {
-  height: 75px; /* Larger logo size */
+  height: 60px; /* Sits nicely with text */
   display: flex;
   align-items: center;
+  object-fit: contain;
+}
+
+#brand-text {
+  font-size: 32px;
+  font-weight: bold;
+  color: var(--retro-dark);
 }
 
 /* Status indicator (COM Connection Status) */
@@ -135,7 +154,7 @@ html, body, #app, #content, .page, .terminal-log {
   border: 2px solid var(--retro-dark);
   box-shadow: 2px 2px 0px var(--retro-gray-md);
   margin-left: 24px;
-  font-size: 14px;
+  font-size: 16px;
 }
 
 .status-dot {
@@ -283,7 +302,7 @@ html, body, #app, #content, .page, .terminal-log {
   background-color: transparent;
   color: var(--retro-dark);
   font-family: var(--pixel-font-family);
-  font-size: 20px;
+  font-size: 24px;
   font-weight: bold;
   padding: 10px 20px;
   cursor: pointer;
@@ -370,7 +389,7 @@ html, body, #app, #content, .page, .terminal-log {
 }
 
 .lock-title {
-  font-size: 38px;
+  font-size: 40px;
   font-weight: bold;
   color: var(--retro-dark);
   text-shadow: 3px 3px 0px var(--retro-gray-lt);
@@ -378,7 +397,7 @@ html, body, #app, #content, .page, .terminal-log {
 }
 
 .lock-subtitle {
-  font-size: 18px;
+  font-size: 16px;
   color: var(--retro-gray-md);
   margin-bottom: 24px;
   font-weight: bold;
@@ -403,7 +422,7 @@ html, body, #app, #content, .page, .terminal-log {
 
 #pin-dots {
   color: var(--flipper-orange);
-  font-size: 28px;
+  font-size: 32px;
   font-weight: bold;
   letter-spacing: 8px;
 }
@@ -418,7 +437,7 @@ html, body, #app, #content, .page, .terminal-log {
   border: 3px solid var(--retro-dark);
   background-color: #ffffff;
   color: var(--retro-dark);
-  font-size: 20px;
+  font-size: 24px;
   font-weight: bold;
   padding: 12px;
   cursor: pointer;
@@ -448,7 +467,7 @@ html, body, #app, #content, .page, .terminal-log {
 
 .pin-hint {
   margin-top: 14px;
-  font-size: 14px;
+  font-size: 16px;
   color: var(--retro-gray-md);
   letter-spacing: 1.5px;
 }
@@ -463,7 +482,7 @@ html, body, #app, #content, .page, .terminal-log {
 }
 
 .welcome-title {
-  font-size: 38px;
+  font-size: 40px;
   font-weight: bold;
   color: var(--retro-dark);
   text-shadow: 3px 3px 0px var(--retro-gray-lt);
@@ -471,7 +490,7 @@ html, body, #app, #content, .page, .terminal-log {
 }
 
 .welcome-subtitle {
-  font-size: 18px;
+  font-size: 16px;
   color: var(--retro-gray-md);
   margin-bottom: 24px;
   letter-spacing: 2px;
@@ -493,7 +512,7 @@ html, body, #app, #content, .page, .terminal-log {
   border: 0;
   background: transparent;
   color: var(--retro-gray-lt);
-  font-size: 14px;
+  font-size: 16px;
   font-weight: bold;
   padding: 8px 16px;
   cursor: pointer;
@@ -525,7 +544,7 @@ html, body, #app, #content, .page, .terminal-log {
 
 .view-hint {
   margin-top: 14px;
-  font-size: 14px;
+  font-size: 16px;
   color: var(--retro-gray-md);
   text-align: center;
 }
@@ -587,14 +606,14 @@ html, body, #app, #content, .page, .terminal-log {
 }
 
 .big-btn .btn-label {
-  font-size: 24px;
+  font-size: 32px;
   font-weight: bold;
   letter-spacing: 1px;
 }
 
 #simulated-badge {
   margin-top: 20px;
-  font-size: 14px;
+  font-size: 16px;
   color: var(--flipper-orange);
   background: var(--retro-dark);
   padding: 4px 12px;
@@ -627,7 +646,7 @@ html, body, #app, #content, .page, .terminal-log {
 
 .menu-title {
   text-align: center;
-  font-size: 28px;
+  font-size: 32px;
   margin-bottom: 24px;
   color: var(--retro-dark);
   text-shadow: 2px 2px 0 var(--retro-gray-lt);
@@ -671,12 +690,12 @@ html, body, #app, #content, .page, .terminal-log {
 }
 
 .menu-card .card-title {
-  font-size: 22px;
+  font-size: 24px;
   font-weight: bold;
 }
 
 .menu-card .card-desc {
-  font-size: 14px;
+  font-size: 16px;
   color: var(--retro-gray-lt);
   line-height: 1.4;
   padding: 0 8px;
@@ -709,7 +728,7 @@ html, body, #app, #content, .page, .terminal-log {
   display: flex;
   justify-content: space-between;
   margin-bottom: 14px;
-  font-size: 20px;
+  font-size: 24px;
 }
 
 .info-label {
@@ -726,7 +745,7 @@ html, body, #app, #content, .page, .terminal-log {
 
 .balance-row {
   margin-top: 14px;
-  font-size: 24px;
+  font-size: 32px;
 }
 
 .pixel-divider {
@@ -775,7 +794,7 @@ html, body, #app, #content, .page, .terminal-log {
   background: transparent;
   border: 0;
   color: #ffffff;
-  font-size: 28px;
+  font-size: 24px;
   outline: none;
   font-family: var(--pixel-font-family);
 }
@@ -812,7 +831,7 @@ html, body, #app, #content, .page, .terminal-log {
 .terminal-log {
   height: 120px;
   overflow-y: auto;
-  font-size: 14px;
+  font-size: 16px;
   background-color: #000;
   border: 4px solid var(--retro-gray-dk);
   padding: 12px;
@@ -858,12 +877,12 @@ html, body, #app, #content, .page, .terminal-log {
   display: flex;
   justify-content: space-between;
   margin-bottom: 8px;
-  font-size: 18px;
+  font-size: 16px;
 }
 
 .receipt-footer {
   margin-top: 16px;
-  font-size: 14px;
+  font-size: 16px;
   color: var(--retro-gray-lt);
 }
 
@@ -949,7 +968,7 @@ html, body, #app, #content, .page, .terminal-log {
 }
 
 .manual-scan-label {
-  font-size: 14px;
+  font-size: 16px;
   color: var(--retro-gray-lt);
   margin-bottom: 6px;
   text-align: left;

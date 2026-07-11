@@ -4,6 +4,9 @@ const path = require('path');
 const fs = require('fs');
 const { app, BrowserWindow, ipcMain } = require('electron');
 
+// Force crisp pixel snapping and disable subpixel antialiasing at the engine level
+app.commandLine.appendSwitch('disable-font-subpixel-positioning');
+
 let mainWindow = null;
 let isSimulatedMode = false;
 let dbLoaded = false;

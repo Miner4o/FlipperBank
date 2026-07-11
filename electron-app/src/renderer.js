@@ -45,13 +45,26 @@ window.api.win.onMaximized((isMax) => {
 // ==================== PLAYSTATION WAVE CANVAS ANIMATION ====================
 const canvas = document.getElementById('waveCanvas');
 const ctx = canvas.getContext('2d');
-let width = canvas.width = window.innerWidth;
-let height = canvas.height = window.innerHeight;
+let dpr = window.devicePixelRatio || 1;
+let width = window.innerWidth;
+let height = window.innerHeight;
 
-window.addEventListener('resize', () => {
-  width = canvas.width = window.innerWidth;
-  height = canvas.height = window.innerHeight;
-});
+function resizeCanvas() {
+  const rect = canvas.getBoundingClientRect();
+  dpr = window.devicePixelRatio || 1;
+  
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  
+  ctx.resetTransform();
+  ctx.scale(dpr, dpr);
+  
+  width = rect.width;
+  height = rect.height;
+}
+
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
 
 // Fine float time increment for absolute smooth continuous flow (mimicking PS3/PS4)
 let time = 0;
