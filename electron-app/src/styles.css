@@ -1,1 +1,975 @@
-/* Place your CSS styles here */
+/* ===========================================================================
+   Flipper Bank Terminal - styles.css
+   Theme: Retro Pixel-Art Flipper Zero styling on a White & Orange Playstation Wave background
+   =========================================================================== */
+
+/* Import Flipper Fonts locally and fallback to VT323 */
+@font-face {
+  font-family: 'Haxrcorp4089';
+  src: url('../../assets/haxrcorp_4089.ttf'),
+       url('../assets/haxrcorp_4089.ttf');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'HelvB08';
+  src: url('../../assets/helvb08.ttf'),
+       url('../assets/helvb08.ttf');
+  font-weight: normal;
+  font-style: normal;
+}
+
+:root {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f6f6f6;
+  
+  --retro-dark: #121212;
+  --retro-gray-dk: #1f1f1f;
+  --retro-gray-md: #555555;
+  --retro-gray-lt: #cccccc;
+  
+  --flipper-orange: #ff8a00;
+  --flipper-orange-glow: rgba(255, 138, 0, 0.25);
+  --flipper-orange-bright: #ffb85c;
+  
+  --danger-red: #d32f2f;
+  --success-green: #388e3c;
+  
+  --pixel-font-family: 'Haxrcorp4089', 'HelvB08', 'VT323', monospace;
+  --ease-pixel: steps(4, end);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--pixel-font-family);
+  font-size: 18px;
+  background-color: var(--bg-primary);
+  color: var(--retro-dark);
+  height: 100vh;
+  overflow: hidden;
+  user-select: none;
+}
+
+/* Hide Scrollbars Everywhere */
+::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  background: transparent !important;
+}
+
+html, body, #app, #content, .page, .terminal-log {
+  scrollbar-width: none !important; /* Firefox */
+  -ms-overflow-style: none !important;  /* IE/Edge */
+  overflow: hidden;
+}
+
+/* Frameless Window Container */
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  position: relative;
+  z-index: 2;
+}
+
+.pixel-font {
+  font-family: var(--pixel-font-family);
+  image-rendering: pixelated;
+  letter-spacing: 0.5px;
+}
+
+/* ==================== PLAYSTATION WAVE CANVAS ==================== */
+#waveCanvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* ==================== CUSTOM TOP BAR (FRAMELESS & TALLER) ==================== */
+#topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 110px; /* Taller topbar matching PatePlay Tester */
+  padding: 0 24px;
+  background: var(--bg-secondary);
+  border-bottom: 4px solid var(--retro-dark);
+  z-index: 10;
+  -webkit-app-region: drag; /* Draggable window drag hotspot */
+}
+
+#brand, #win-controls, #connection-status {
+  -webkit-app-region: no-drag; /* Exclude interactions from dragging */
+}
+
+#brand {
+  display: flex;
+  align-items: center;
+}
+
+#logo {
+  height: 75px; /* Larger logo size */
+  display: flex;
+  align-items: center;
+}
+
+/* Status indicator (COM Connection Status) */
+#connection-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--retro-dark);
+  color: #fff;
+  padding: 6px 12px;
+  border: 2px solid var(--retro-dark);
+  box-shadow: 2px 2px 0px var(--retro-gray-md);
+  margin-left: 24px;
+  font-size: 14px;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  background-color: var(--retro-gray-md);
+  display: inline-block;
+  border-radius: 50%;
+  box-shadow: 0 0 4px var(--retro-gray-md);
+}
+
+.status-online .status-dot {
+  background-color: var(--success-green);
+  box-shadow: 0 0 8px #5cbae6;
+  animation: pulse-green 1.5s infinite alternate var(--ease-pixel);
+}
+
+.status-offline .status-dot {
+  background-color: var(--danger-red);
+  animation: pulse-red 1.5s infinite alternate var(--ease-pixel);
+}
+
+@keyframes pulse-green {
+  0% { opacity: 0.4; }
+  100% { opacity: 1; }
+}
+
+@keyframes pulse-red {
+  0% { opacity: 0.4; }
+  100% { opacity: 1; }
+}
+
+/* Window buttons (min, max, close) */
+#win-controls {
+  display: flex;
+  margin-top: -30px; /* Align near the top right corner */
+}
+
+.win-btn {
+  width: 44px;
+  height: 38px;
+  border: 0;
+  background: transparent;
+  color: var(--retro-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.win-btn:hover {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.win-btn.close:hover {
+  background: var(--danger-red);
+  color: #ffffff;
+}
+
+/* ==================== CONTENT REGION ==================== */
+#content {
+  flex: 1;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  z-index: 5;
+  overflow: hidden;
+}
+
+/* Page states */
+.page {
+  display: none;
+  width: 100%;
+  height: 100%;
+  padding: 24px;
+  overflow: hidden;
+}
+
+.page.active {
+  display: block;
+  animation: pixelFadeIn 0.2s var(--ease-pixel) both;
+}
+
+@keyframes pixelFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ==================== COMPONENT STYLING (RETRO) ==================== */
+
+/* Pixel Cards */
+.pixel-card {
+  background-color: var(--retro-dark);
+  color: #ffffff;
+  border: 4px solid var(--retro-dark);
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 
+    inset -4px -4px 0px 0px var(--retro-gray-dk),
+    inset 4px 4px 0px 0px var(--flipper-orange),
+    8px 8px 0px 0px var(--retro-gray-md);
+  image-rendering: pixelated;
+  position: relative;
+}
+
+/* Pixel Card Buttons */
+.pixel-card-btn {
+  display: block;
+  border: 4px solid var(--retro-dark);
+  background-color: var(--retro-dark);
+  color: #ffffff;
+  padding: 16px;
+  text-decoration: none;
+  box-shadow: 
+    inset -4px -4px 0px 0px var(--retro-gray-dk),
+    inset 4px 4px 0px 0px var(--flipper-orange),
+    6px 6px 0px 0px var(--retro-gray-md);
+  cursor: pointer;
+  position: relative;
+  transition: transform 0.1s var(--ease-pixel), box-shadow 0.1s var(--ease-pixel), border-color 0.1s var(--ease-pixel);
+}
+
+.pixel-card-btn:hover {
+  border-color: var(--flipper-orange);
+  box-shadow: 
+    inset -4px -4px 0px 0px var(--retro-gray-dk),
+    inset 4px 4px 0px 0px var(--flipper-orange-bright),
+    0 0 0 4px var(--flipper-orange-glow),
+    6px 6px 0px 0px var(--flipper-orange);
+  transform: translate(-2px, -2px);
+}
+
+.pixel-card-btn:active {
+  box-shadow: 
+    inset 4px 4px 0px 0px var(--retro-gray-dk),
+    inset -4px -4px 0px 0px var(--flipper-orange),
+    2px 2px 0px 0px var(--retro-gray-md);
+  transform: translate(2px, 2px);
+}
+
+/* Pixel Buttons - Secondary (Outlined look) */
+.pixel-btn-secondary {
+  border: 4px solid var(--retro-dark);
+  background-color: transparent;
+  color: var(--retro-dark);
+  font-family: var(--pixel-font-family);
+  font-size: 20px;
+  font-weight: bold;
+  padding: 10px 20px;
+  cursor: pointer;
+  box-shadow: 4px 4px 0px 0px var(--retro-dark);
+  transition: all 0.05s var(--ease-pixel);
+}
+
+.pixel-btn-secondary:hover {
+  background-color: var(--retro-dark);
+  color: #ffffff;
+  transform: translate(-1px, -1px);
+  box-shadow: 5px 5px 0px 0px var(--flipper-orange);
+}
+
+.pixel-btn-secondary:active {
+  transform: translate(3px, 3px);
+  box-shadow: 1px 1px 0px 0px var(--retro-dark);
+}
+
+/* Big Action Button */
+.pixel-btn-action {
+  width: 100%;
+  border: 4px solid var(--retro-dark);
+  background-color: var(--flipper-orange);
+  color: var(--retro-dark);
+  font-family: var(--pixel-font-family);
+  font-size: 24px;
+  font-weight: bold;
+  padding: 12px;
+  cursor: pointer;
+  box-shadow: 
+    inset -4px -4px 0px 0px var(--retro-dark),
+    inset 4px 4px 0px 0px var(--flipper-orange-bright),
+    6px 6px 0px 0px var(--retro-dark);
+  transition: transform 0.05s var(--ease-pixel);
+  margin-top: 16px;
+}
+
+.pixel-btn-action:hover {
+  background-color: var(--flipper-orange-bright);
+  box-shadow: 
+    inset -4px -4px 0px 0px var(--retro-dark),
+    inset 4px 4px 0px 0px #ffffff,
+    6px 6px 0px 0px var(--flipper-orange);
+  transform: translate(-2px, -2px);
+}
+
+.pixel-btn-action:active {
+  transform: translate(2px, 2px);
+  box-shadow: 
+    inset 4px 4px 0px 0px var(--retro-dark),
+    2px 2px 0px 0px var(--retro-dark);
+}
+
+/* Inline/Group Buttons */
+.pixel-btn-inline {
+  border: 4px solid var(--retro-dark);
+  background-color: var(--retro-dark);
+  color: #ffffff;
+  font-family: var(--pixel-font-family);
+  font-size: 16px;
+  padding: 6px 12px;
+  cursor: pointer;
+  box-shadow: 2px 2px 0px var(--retro-gray-md);
+}
+
+.pixel-btn-inline:hover {
+  border-color: var(--flipper-orange);
+  color: var(--flipper-orange);
+}
+
+.pixel-btn-inline:active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0px var(--retro-gray-md);
+}
+
+/* ==================== PASSCODE LOCK SCREEN DETAILS ==================== */
+.lock-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+.lock-title {
+  font-size: 38px;
+  font-weight: bold;
+  color: var(--retro-dark);
+  text-shadow: 3px 3px 0px var(--retro-gray-lt);
+  margin-bottom: 8px;
+}
+
+.lock-subtitle {
+  font-size: 18px;
+  color: var(--retro-gray-md);
+  margin-bottom: 24px;
+  font-weight: bold;
+  letter-spacing: 1px;
+}
+
+.lock-card {
+  width: 320px;
+  padding: 16px;
+  box-shadow: 6px 6px 0px var(--retro-gray-md);
+}
+
+.pin-display-container {
+  background-color: #000;
+  border: 4px solid var(--retro-gray-dk);
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+#pin-dots {
+  color: var(--flipper-orange);
+  font-size: 28px;
+  font-weight: bold;
+  letter-spacing: 8px;
+}
+
+.keypad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.keypad-btn {
+  border: 3px solid var(--retro-dark);
+  background-color: #ffffff;
+  color: var(--retro-dark);
+  font-size: 20px;
+  font-weight: bold;
+  padding: 12px;
+  cursor: pointer;
+  box-shadow: 2px 2px 0px var(--retro-dark);
+  transition: transform 0.05s var(--ease-pixel), box-shadow 0.05s var(--ease-pixel);
+}
+
+.keypad-btn:hover {
+  background-color: var(--flipper-orange-glow);
+  border-color: var(--flipper-orange);
+}
+
+.keypad-btn:active {
+  transform: translate(2px, 2px);
+  box-shadow: 0px 0px 0px var(--retro-dark);
+}
+
+.keypad-btn.clear-btn {
+  background-color: #fce8e6;
+  color: var(--danger-red);
+}
+
+.keypad-btn.action-btn {
+  background-color: #e6f4ea;
+  color: var(--success-green);
+}
+
+.pin-hint {
+  margin-top: 14px;
+  font-size: 14px;
+  color: var(--retro-gray-md);
+  letter-spacing: 1.5px;
+}
+
+/* ==================== LOGIN PAGE DETAILS ==================== */
+.login-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+.welcome-title {
+  font-size: 38px;
+  font-weight: bold;
+  color: var(--retro-dark);
+  text-shadow: 3px 3px 0px var(--retro-gray-lt);
+  margin-bottom: 8px;
+}
+
+.welcome-subtitle {
+  font-size: 18px;
+  color: var(--retro-gray-md);
+  margin-bottom: 24px;
+  letter-spacing: 2px;
+  font-weight: bold;
+}
+
+/* Toggle group for Admin/User */
+.mode-toggle-group {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+  background: var(--retro-dark);
+  padding: 6px;
+  border: 4px solid var(--retro-dark);
+  box-shadow: 4px 4px 0px var(--retro-gray-md);
+}
+
+.toggle-btn {
+  border: 0;
+  background: transparent;
+  color: var(--retro-gray-lt);
+  font-size: 14px;
+  font-weight: bold;
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: all 0.1s var(--ease-pixel);
+}
+
+.toggle-btn:hover {
+  color: #fff;
+}
+
+.toggle-btn.active {
+  background-color: var(--flipper-orange);
+  color: var(--retro-dark);
+  box-shadow: inset -2px -2px 0px #b86300;
+}
+
+/* Views under toggles */
+.login-view-mode {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 280px;
+}
+
+.login-view-mode.active {
+  display: flex;
+}
+
+.view-hint {
+  margin-top: 14px;
+  font-size: 14px;
+  color: var(--retro-gray-md);
+  text-align: center;
+}
+
+/* User login specific sizes */
+.user-login-card {
+  width: 320px;
+  padding: 16px;
+  box-shadow: 6px 6px 0px var(--retro-gray-md);
+  margin-bottom: 0;
+}
+
+.user-login-card .form-field {
+  margin-bottom: 12px;
+}
+
+.user-login-card .pixel-input {
+  background-color: #000;
+  border: 2px solid var(--retro-gray-dk);
+  padding: 6px 10px;
+  font-size: 16px;
+}
+
+/* Big Login Button */
+.big-btn {
+  width: 240px;
+  height: 240px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0;
+  text-align: center;
+}
+
+.big-btn .btn-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.rfid-icon {
+  width: 80px;
+  height: 80px;
+  color: var(--flipper-orange);
+}
+
+.big-btn:hover .rfid-icon {
+  color: var(--flipper-orange-bright);
+  animation: shake 0.5s infinite var(--ease-pixel);
+}
+
+@keyframes shake {
+  0% { transform: translate(0, 0); }
+  25% { transform: translate(-2px, 2px); }
+  50% { transform: translate(2px, -2px); }
+  75% { transform: translate(-2px, -2px); }
+  100% { transform: translate(0, 0); }
+}
+
+.big-btn .btn-label {
+  font-size: 24px;
+  font-weight: bold;
+  letter-spacing: 1px;
+}
+
+#simulated-badge {
+  margin-top: 20px;
+  font-size: 14px;
+  color: var(--flipper-orange);
+  background: var(--retro-dark);
+  padding: 4px 12px;
+  border: 2px solid var(--flipper-orange);
+}
+
+/* ==================== MAIN MENU DETAILS ==================== */
+.menu-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.account-bar {
+  display: flex;
+  justify-content: space-between;
+  background: var(--retro-dark);
+  color: #fff;
+  border: 4px solid var(--retro-dark);
+  padding: 8px 16px;
+  font-size: 16px;
+  margin-bottom: 24px;
+  box-shadow: 4px 4px 0 var(--retro-gray-md);
+}
+
+.highlight {
+  color: var(--flipper-orange);
+  font-weight: bold;
+}
+
+.menu-title {
+  text-align: center;
+  font-size: 28px;
+  margin-bottom: 24px;
+  color: var(--retro-dark);
+  text-shadow: 2px 2px 0 var(--retro-gray-lt);
+}
+
+.menu-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  flex: 1;
+  max-height: 280px;
+  margin-bottom: 32px;
+}
+
+.menu-card {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.menu-card .btn-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.menu-card .pixel-icon {
+  font-size: 32px;
+  background: var(--flipper-orange);
+  color: var(--retro-dark);
+  padding: 4px 16px;
+  font-weight: bold;
+  border: 2px solid var(--retro-dark);
+}
+
+.menu-card:hover .pixel-icon {
+  background: var(--flipper-orange-bright);
+}
+
+.menu-card .card-title {
+  font-size: 22px;
+  font-weight: bold;
+}
+
+.menu-card .card-desc {
+  font-size: 14px;
+  color: var(--retro-gray-lt);
+  line-height: 1.4;
+  padding: 0 8px;
+}
+
+#logoutBtn {
+  align-self: center;
+  width: 240px;
+}
+
+/* ==================== VIEW CONTAINERS ==================== */
+.view-container {
+  max-width: 600px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  justify-content: center;
+}
+
+.view-title {
+  font-size: 32px;
+  text-align: center;
+  margin-bottom: 20px;
+  color: var(--retro-dark);
+  text-shadow: 2px 2px 0 var(--retro-gray-lt);
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  font-size: 20px;
+}
+
+.info-label {
+  color: var(--retro-gray-lt);
+}
+
+.info-val {
+  font-weight: bold;
+}
+
+.highlight-val {
+  color: var(--flipper-orange-bright);
+}
+
+.balance-row {
+  margin-top: 14px;
+  font-size: 24px;
+}
+
+.pixel-divider {
+  border: 0;
+  height: 4px;
+  background-color: var(--flipper-orange);
+  margin: 16px 0;
+}
+
+.back-btn {
+  margin-top: 16px;
+  align-self: flex-start;
+}
+
+/* ==================== FORM & INPUT STYLING ==================== */
+.form-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.field-help {
+  font-size: 16px;
+  color: var(--flipper-orange);
+  margin-bottom: 4px;
+}
+
+.input-container {
+  display: flex;
+  align-items: center;
+  background-color: #000;
+  border: 4px solid var(--retro-gray-dk);
+  padding: 8px 16px;
+  position: relative;
+}
+
+.input-prefix {
+  font-size: 32px;
+  color: var(--flipper-orange);
+  font-weight: bold;
+  margin-right: 12px;
+}
+
+.pixel-input {
+  width: 100%;
+  background: transparent;
+  border: 0;
+  color: #ffffff;
+  font-size: 28px;
+  outline: none;
+  font-family: var(--pixel-font-family);
+}
+
+.pixel-input::placeholder {
+  color: var(--retro-gray-md);
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-field label {
+  color: var(--flipper-orange);
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.input-group {
+  display: flex;
+  gap: 8px;
+}
+
+.input-group .pixel-input {
+  background: #000;
+  border: 4px solid var(--retro-gray-dk);
+  padding: 8px 16px;
+  font-size: 20px;
+}
+
+/* ==================== LOG & TERMINAL VIEW ==================== */
+.terminal-log {
+  height: 120px;
+  overflow-y: auto;
+  font-size: 14px;
+  background-color: #000;
+  border: 4px solid var(--retro-gray-dk);
+  padding: 12px;
+  font-family: var(--pixel-font-family);
+  margin-top: 16px;
+  box-shadow: inset 0 0 10px rgba(0, 255, 0, 0.1);
+}
+
+.log-line {
+  margin-bottom: 4px;
+  color: #00ff00;
+  line-height: 1.3;
+}
+
+.log-line.error {
+  color: #ff3333;
+}
+
+.log-line.text-dim {
+  color: #888888;
+}
+
+/* Success Card details */
+.success-card {
+  border-color: var(--success-green);
+  box-shadow: 
+    inset -4px -4px 0px 0px var(--retro-gray-dk),
+    inset 4px 4px 0px 0px var(--success-green),
+    6px 6px 0px 0px var(--success-green);
+  text-align: center;
+  margin-top: 16px;
+}
+
+.success-title {
+  font-size: 24px;
+  font-weight: bold;
+  color: var(--success-green);
+  margin-bottom: 12px;
+  letter-spacing: 1px;
+}
+
+.receipt-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 18px;
+}
+
+.receipt-footer {
+  margin-top: 16px;
+  font-size: 14px;
+  color: var(--retro-gray-lt);
+}
+
+/* ==================== MODAL OVERLAY (SIMULATOR) ==================== */
+.modal-overlay {
+  display: none;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.6); /* Slightly darker backdrop for focus */
+  z-index: 100;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-overlay.active {
+  display: flex;
+}
+
+.modal-content {
+  max-width: 480px;
+  width: 90%;
+  text-align: center;
+}
+
+.modal-title {
+  font-size: 24px;
+  font-weight: bold;
+  color: var(--flipper-orange);
+  margin-bottom: 8px;
+}
+
+.modal-pulse {
+  font-size: 16px;
+  margin-bottom: 20px;
+  animation: pulse-orange 1s infinite alternate var(--ease-pixel);
+}
+
+@keyframes pulse-orange {
+  0% { opacity: 0.5; color: var(--retro-gray-lt); }
+  100% { opacity: 1; color: var(--flipper-orange-bright); }
+}
+
+.modal-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.sim-scan-card-btn {
+  background-color: var(--retro-gray-dk);
+  color: #fff;
+  border: 2px solid var(--retro-gray-lt);
+  padding: 8px 12px;
+  font-size: 16px;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+}
+
+.sim-scan-card-btn:hover {
+  background-color: var(--retro-dark);
+  border-color: var(--flipper-orange);
+  color: var(--flipper-orange);
+}
+
+.sim-scan-card-btn.data-suspended {
+  border-color: var(--danger-red);
+}
+
+.sim-scan-card-btn.data-suspended:hover {
+  color: var(--danger-red);
+  border-color: var(--danger-red);
+}
+
+.modal-divider {
+  height: 2px;
+  background-color: var(--retro-gray-md);
+  margin: 16px 0;
+}
+
+.manual-scan-label {
+  font-size: 14px;
+  color: var(--retro-gray-lt);
+  margin-bottom: 6px;
+  text-align: left;
+}
+
+.modal-content .input-group .pixel-input {
+  font-size: 16px;
+  border-width: 2px;
+  padding: 6px 10px;
+}
+
+/* OVERRIDE: Cancel button is white and stands out */
+.cancel-btn {
+  margin-top: 20px;
+  width: 100%;
+  color: #ffffff !important;
+  border-color: #ffffff !important;
+}
+
+.cancel-btn:hover {
+  background-color: #ffffff !important;
+  color: var(--retro-dark) !important;
+}

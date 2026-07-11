@@ -1,1 +1,322 @@
-<!-- Place your HTML code here -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Flipper Bank Terminal</title>
+  <!-- Import VT323 pixelated font for fallback -->
+  <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- Frameless App Container -->
+  <div id="app">
+    
+    <!-- Top Custom Navigation Bar (Draggable) -->
+    <header id="topbar">
+      <div id="brand">
+        <!-- Pixel-style SVG Logo for Flipper Bank (scaled larger) -->
+        <svg id="logo" viewBox="0 0 240 60" xmlns="http://www.w3.org/2000/svg">
+          <rect x="0" y="5" width="50" height="50" fill="#ff8a00" />
+          <!-- Small pixel art dolphin fin inside orange block -->
+          <path d="M10 38 C20 38, 26 24, 40 30 C32 18, 16 20, 10 38 Z" fill="#ffffff" />
+          <text x="62" y="38" font-family="'Haxrcorp4089', 'VT323', monospace" font-size="34" fill="#1a1a1a" font-weight="bold">FLIPPER<tspan fill="#ff8a00">BANK</tspan></text>
+        </svg>
+      </div>
+
+      <div id="connection-status" class="status-offline">
+        <span class="status-dot"></span>
+        <span id="status-text" class="pixel-font">OFFLINE</span>
+      </div>
+
+      <!-- Window Controls (Minimize, Maximize/Restore, Close) -->
+      <div id="win-controls">
+        <button class="win-btn" id="win-min" title="Minimize">
+          <svg width="11" height="11" viewBox="0 0 11 11"><rect x="1" y="5" width="9" height="1" fill="currentColor"/></svg>
+        </button>
+        <button class="win-btn" id="win-max" title="Maximize">
+          <svg class="ico-max" width="11" height="11" viewBox="0 0 11 11"><rect x="1.5" y="1.5" width="8" height="8" fill="none" stroke="currentColor" stroke-width="1"/></svg>
+          <svg class="ico-restore" width="11" height="11" viewBox="0 0 11 11" hidden><rect x="1.5" y="3.2" width="6.3" height="6.3" fill="none" stroke="currentColor" stroke-width="1"/><path d="M3.7 3.2 V1.5 H9.5 V7.3 H7.8" fill="none" stroke="currentColor" stroke-width="1"/></svg>
+        </button>
+        <button class="win-btn close" id="win-close" title="Close">
+          <svg width="11" height="11" viewBox="0 0 11 11"><path d="M1.5 1.5 L9.5 9.5 M9.5 1.5 L1.5 9.5" stroke="currentColor" stroke-width="1.2"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Canvas for PlayStation Orange Waves -->
+    <canvas id="waveCanvas"></canvas>
+
+    <!-- Main Content Area -->
+    <main id="content">
+
+      <!-- ==================== PASSCODE LOCK SCREEN ==================== -->
+      <section id="lockPage" class="page active">
+        <div class="lock-container">
+          <h1 class="pixel-font lock-title">TERMINAL SECURED</h1>
+          <p class="pixel-font lock-subtitle">ENTER SECURITY PASSCODE TO UNLOCK</p>
+          
+          <div class="lock-card pixel-card">
+            <!-- Pin Display -->
+            <div class="pin-display-container">
+              <span id="pin-dots" class="pixel-font"></span>
+            </div>
+            
+            <!-- Pin Keypad -->
+            <div class="keypad">
+              <button class="keypad-btn pixel-font" data-val="1">1</button>
+              <button class="keypad-btn pixel-font" data-val="2">2</button>
+              <button class="keypad-btn pixel-font" data-val="3">3</button>
+              <button class="keypad-btn pixel-font" data-val="4">4</button>
+              <button class="keypad-btn pixel-font" data-val="5">5</button>
+              <button class="keypad-btn pixel-font" data-val="6">6</button>
+              <button class="keypad-btn pixel-font" data-val="7">7</button>
+              <button class="keypad-btn pixel-font" data-val="8">8</button>
+              <button class="keypad-btn pixel-font" data-val="9">9</button>
+              <button class="keypad-btn clear-btn pixel-font" id="keypad-clear">CLR</button>
+              <button class="keypad-btn pixel-font" data-val="0">0</button>
+              <button class="keypad-btn action-btn pixel-font" id="keypad-enter">OK</button>
+            </div>
+          </div>
+          
+          <p class="pixel-font pin-hint">HINT: DEFAULT PIN IS 1234</p>
+        </div>
+      </section>
+      
+      <!-- ==================== LOGIN PAGE ==================== -->
+      <section id="loginPage" class="page">
+        <div class="login-container">
+          <h1 class="pixel-font welcome-title">FLIPPER BANK v1.0</h1>
+          <p class="pixel-font welcome-subtitle">SELECT ACCESS MODE</p>
+
+          <!-- Toggle group between Admin & User login modes -->
+          <div id="login-mode-select" class="mode-toggle-group">
+            <button id="toggleAdminBtn" class="toggle-btn active pixel-font">ADMIN (NFC SCAN)</button>
+            <button id="toggleUserBtn" class="toggle-btn pixel-font">USER (CREDENTIALS)</button>
+          </div>
+
+          <!-- ADMIN NFC SCAN LOGIN VIEW -->
+          <div id="admin-login-view" class="login-view-mode active">
+            <button id="loginBtn" class="pixel-card-btn big-btn">
+              <div class="btn-content">
+                <svg class="rfid-icon" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="8" y="16" width="48" height="32" rx="4" stroke="currentColor" stroke-width="4" />
+                  <circle cx="20" cy="32" r="4" fill="currentColor" />
+                  <path d="M36 24 C40 28, 40 36, 36 40 M42 20 C48 26, 48 38, 42 44 M48 16 C56 24, 56 40, 48 48" stroke="currentColor" stroke-width="3" stroke-linecap="round" />
+                </svg>
+                <span class="pixel-font btn-label">SCAN NFC CARD</span>
+              </div>
+            </button>
+            <p class="pixel-font view-hint">WAITING FOR RFID TOKEN (MIFARE CLASSIC)</p>
+          </div>
+
+          <!-- USER MANUAL EMAIL & PASSWORD LOGIN VIEW -->
+          <div id="user-login-view" class="login-view-mode" style="display: none;">
+            <div class="form-card pixel-card user-login-card">
+              <div class="form-field">
+                <label class="pixel-font">EMAIL ADDRESS:</label>
+                <input type="email" id="login-email-input" class="pixel-input pixel-font login-field" placeholder="user@flipper.com" />
+              </div>
+              <div class="form-field">
+                <label class="pixel-font">PASSWORD:</label>
+                <input type="password" id="login-password-input" class="pixel-input pixel-font login-field" placeholder="••••••••" />
+              </div>
+              <button id="submitUserLoginBtn" class="pixel-btn-action pixel-font">
+                [ LOGIN USER ]
+              </button>
+            </div>
+            <p class="pixel-font view-hint">MOCK: user@flipper.com / password123</p>
+          </div>
+          
+          <div id="simulated-badge" class="pixel-font" style="display: none;">[ SIMULATION MODE ACTIVE ]</div>
+        </div>
+      </section>
+
+      <!-- ==================== MAIN MENU ==================== -->
+      <section id="mainMenuPage" class="page">
+        <div class="menu-container">
+          <div class="account-bar pixel-font">
+            <div>USER: <span id="user-display-name" class="highlight">---</span></div>
+            <div>CARD ID: <span id="user-display-card" class="highlight">---</span></div>
+          </div>
+          
+          <h2 class="pixel-font menu-title">SELECT OPERATION</h2>
+          
+          <div class="menu-grid">
+            <!-- Balance Card -->
+            <button id="menuBalanceBtn" class="pixel-card-btn menu-card">
+              <div class="btn-content">
+                <div class="pixel-icon">$$$</div>
+                <span class="pixel-font card-title">BALANCE</span>
+                <span class="pixel-font card-desc">View funds and account status</span>
+              </div>
+            </button>
+
+            <!-- Payment Card -->
+            <button id="menuPaymentBtn" class="pixel-card-btn menu-card">
+              <div class="btn-content">
+                <div class="pixel-icon">PAY</div>
+                <span class="pixel-font card-title">PAYMENT</span>
+                <span class="pixel-font card-desc">Charge standard purchases</span>
+              </div>
+            </button>
+
+            <!-- Transaction Card -->
+            <button id="menuTransactionBtn" class="pixel-card-btn menu-card">
+              <div class="btn-content">
+                <div class="pixel-icon">TX</div>
+                <span class="pixel-font card-title">TRANSACTION</span>
+                <span class="pixel-font card-desc">Transfer cash to another card</span>
+              </div>
+            </button>
+          </div>
+
+          <button id="logoutBtn" class="pixel-btn-secondary pixel-font">
+            [ LOGOUT TERMINAL ]
+          </button>
+        </div>
+      </section>
+
+      <!-- ==================== BALANCE VIEW ==================== -->
+      <section id="balancePage" class="page">
+        <div class="view-container">
+          <h2 class="pixel-font view-title">ACCOUNT BALANCE</h2>
+          
+          <div class="info-card pixel-card">
+            <div class="info-row">
+              <span class="pixel-font info-label">HOLDER NAME:</span>
+              <span id="balance-holder" class="pixel-font info-val">---</span>
+            </div>
+            <div class="info-row">
+              <span class="pixel-font info-label">CARD ID:</span>
+              <span id="balance-card" class="pixel-font info-val">---</span>
+            </div>
+            <div class="info-row">
+              <span class="pixel-font info-label">CARD STATUS:</span>
+              <span id="balance-status" class="pixel-font info-val">---</span>
+            </div>
+            <hr class="pixel-divider" />
+            <div class="info-row balance-row">
+              <span class="pixel-font info-label">AVAILABLE BALANCE:</span>
+              <span id="balance-amount" class="pixel-font info-val highlight-val">$0.00</span>
+            </div>
+          </div>
+          
+          <button class="back-btn pixel-btn-secondary pixel-font">
+            &lt; BACK TO MENU
+          </button>
+        </div>
+      </section>
+
+      <!-- ==================== PAYMENT VIEW ==================== -->
+      <section id="paymentPage" class="page">
+        <div class="view-container">
+          <h2 class="pixel-font view-title">TERMINAL PAYMENT</h2>
+          
+          <div class="form-card pixel-card">
+            <p class="pixel-font field-help">ENTER PURCHASE AMOUNT</p>
+            <div class="input-container">
+              <span class="pixel-font input-prefix">$</span>
+              <input type="number" id="payment-amount-input" class="pixel-input pixel-font" placeholder="0.00" step="0.01" min="0.01" />
+            </div>
+            
+            <button id="triggerPaymentBtn" class="pixel-btn-action pixel-font">
+              [ CHARGE CARD ]
+            </button>
+          </div>
+
+          <div id="payment-success-card" class="pixel-card success-card" style="display: none;">
+            <p class="pixel-font success-title">PAYMENT SUCCESSFUL</p>
+            <div class="receipt-row">
+              <span class="pixel-font">AMOUNT CHARGED:</span>
+              <span id="receipt-charged" class="pixel-font highlight-val">$0.00</span>
+            </div>
+            <div class="receipt-row">
+              <span class="pixel-font">NEW BALANCE:</span>
+              <span id="receipt-new-balance" class="pixel-font">---</span>
+            </div>
+            <p class="pixel-font receipt-footer">THANK YOU FOR YOUR TRANSACTION</p>
+          </div>
+
+          <button class="back-btn pixel-btn-secondary pixel-font">
+            &lt; BACK TO MENU
+          </button>
+        </div>
+      </section>
+
+      <!-- ==================== TRANSACTION VIEW ==================== -->
+      <section id="transactionPage" class="page">
+        <div class="view-container">
+          <h2 class="pixel-font view-title">FUNDS TRANSFER</h2>
+          
+          <div class="form-card pixel-card">
+            <div class="form-field">
+              <label class="pixel-font">RECEIVER CARD ID:</label>
+              <div class="input-group">
+                <input type="text" id="tx-receiver-input" class="pixel-input pixel-font" placeholder="FLIP_CARD_XXX" />
+                <button id="txScanReceiverBtn" class="pixel-btn-inline pixel-font">SCAN CARD</button>
+              </div>
+            </div>
+
+            <div class="form-field">
+              <label class="pixel-font">TRANSFER AMOUNT ($):</label>
+              <input type="number" id="tx-amount-input" class="pixel-input pixel-font" placeholder="0.00" step="0.01" min="0.01" />
+            </div>
+
+            <button id="triggerTransferBtn" class="pixel-btn-action pixel-font">
+              [ EXECUTE TRANSFER ]
+            </button>
+          </div>
+
+          <div id="tx-log" class="pixel-card terminal-log pixel-font">
+            <div class="log-line text-dim">&gt; Terminal ready for transaction.</div>
+          </div>
+
+          <button class="back-btn pixel-btn-secondary pixel-font">
+            &lt; BACK TO MENU
+          </button>
+        </div>
+      </section>
+      
+    </main>
+
+    <!-- ==================== MODAL: SIMULATOR SCANNER OVERLAY ==================== -->
+    <div id="scannerModal" class="modal-overlay">
+      <div class="pixel-card modal-content">
+        <h3 class="pixel-font modal-title">CARD SCANNER SIMULATOR</h3>
+        <p class="pixel-font modal-pulse">WAVE FLIPPER ZERO NEAR THE RFID READER</p>
+        
+        <div class="modal-buttons">
+          <button class="sim-scan-card-btn pixel-font" data-card="FLIP_CARD_001">
+            [ Scan: John Doe ($150.00) ]
+          </button>
+          <button class="sim-scan-card-btn pixel-font" data-card="FLIP_CARD_002">
+            [ Scan: Alice Smith ($1420.50) ]
+          </button>
+          <button class="sim-scan-card-btn pixel-font" data-card="FLIP_CARD_003">
+            [ Scan: Bob Johnson ($0.75) ]
+          </button>
+          <button class="sim-scan-card-btn pixel-font data-suspended" data-card="FLIP_CARD_004">
+            [ Scan: Charlie Brown (Suspended) ]
+          </button>
+        </div>
+        
+        <div class="modal-divider"></div>
+        
+        <p class="pixel-font manual-scan-label">OR ENTER CARD ID MANUALLY:</p>
+        <div class="input-group">
+          <input type="text" id="manual-card-id-input" class="pixel-input pixel-font" placeholder="FLIP_CARD_001" />
+          <button id="manualScanSubmitBtn" class="pixel-btn-inline pixel-font">SUBMIT</button>
+        </div>
+
+        <button id="cancelScanBtn" class="pixel-btn-secondary pixel-font cancel-btn">
+          [ CANCEL ]
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>
