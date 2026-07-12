@@ -50,6 +50,14 @@
   text-rendering: optimizeSpeed !important;
 }
 
+/* Let SVGs render normally — the global text-rendering rule corrupts strokes */
+svg, svg * {
+  text-rendering: auto !important;
+}
+
+/* The HTML hidden attribute must always win over any display rules */
+[hidden] { display: none !important; }
+
 body {
   font-family: var(--pixel-font-family);
   font-size: 16px;
@@ -118,9 +126,10 @@ html, body, #app, #content, .page, .terminal-log {
   border-bottom: 4px solid var(--retro-dark);
   z-index: 10;
   -webkit-app-region: drag; /* Draggable window drag hotspot */
+  position: relative;
 }
 
-#brand, #win-controls, #connection-status {
+#brand, #win-controls, #win-hotspot, #connection-status {
   -webkit-app-region: no-drag; /* Exclude interactions from dragging */
 }
 
@@ -188,31 +197,73 @@ html, body, #app, #content, .page, .terminal-log {
 }
 
 /* Window buttons (min, max, close) */
+#win-hotspot {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 170px;
+  height: 44px;
+  z-index: 3;
+}
+
 #win-controls {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 4;
   display: flex;
-  margin-top: -30px; /* Align near the top right corner */
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s steps(4, end);
+}
+
+#win-hotspot:hover ~ #win-controls,
+#win-controls:hover {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .win-btn {
-  width: 44px;
-  height: 38px;
+  width: 46px;
+  height: 34px;
   border: 0;
   background: transparent;
-  color: var(--retro-dark);
+  color: var(--retro-gray-md);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: background 0.1s;
+  transition: background 0.15s steps(4, end), color 0.15s steps(4, end);
+}
+
+.win-btn svg {
+  transition: transform 0.18s steps(4, end);
 }
 
 .win-btn:hover {
   background: rgba(0, 0, 0, 0.08);
+  color: var(--retro-dark);
+}
+
+.win-btn:hover svg {
+  transform: scale(1.2);
+}
+
+.win-btn:active svg {
+  transform: scale(0.9);
 }
 
 .win-btn.close:hover {
   background: var(--danger-red);
   color: #ffffff;
+}
+
+.win-btn.close:hover svg {
+  transform: rotate(90deg) scale(1.1);
+}
+
+.win-btn.close:active {
+  background: #c42f2f;
 }
 
 /* ==================== CONTENT REGION ==================== */
