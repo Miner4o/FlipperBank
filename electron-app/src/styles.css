@@ -37,6 +37,7 @@
   --success-green: #388e3c;
   
   --pixel-font-family: 'Haxrcorp4089', 'HelvB08', 'VT323', monospace;
+  --ui-font-family: "Segoe UI", Tahoma, sans-serif;
   --ease-pixel: steps(4, end);
 }
 
@@ -44,13 +45,9 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
-  -webkit-font-smoothing: none !important;
-  -moz-osx-font-smoothing: none !important;
-  font-smoothing: none !important;
-  text-rendering: optimizeSpeed !important;
 }
 
-/* Let SVGs render normally — the global text-rendering rule corrupts strokes */
+/* Let SVGs render normally */
 svg, svg * {
   text-rendering: auto !important;
 }
@@ -66,6 +63,11 @@ body {
   height: 100vh;
   overflow: hidden;
   user-select: none;
+}
+
+/* Pixel font class — used only for branding and retro headings */
+.pixel-font {
+  font-family: var(--pixel-font-family);
 }
 
 /* Hide Scrollbars Everywhere */
