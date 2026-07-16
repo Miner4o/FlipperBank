@@ -120,6 +120,8 @@ int main(int argc, char* argv[]) {
     dcbSerialParams.StopBits = ONESTOPBIT;
     dcbSerialParams.Parity   = NOPARITY;
     dcbSerialParams.fDtrControl = DTR_CONTROL_ENABLE; 
+    dcbSerialParams.fOutxCtsFlow = FALSE;
+    dcbSerialParams.fRtsControl = RTS_CONTROL_DISABLE;
 
     if (!SetCommState(hComm, &dcbSerialParams)) {
         printf("Error setting state\n");

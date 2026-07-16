@@ -126,37 +126,3 @@ typedef struct {
 
 #pragma pack(pop)
 ```
-
-### 4.2 C API Declarations
-
-The `bank_core.dll` dynamically exports the following API functions:
-
-#### Database Management Functions
-* `int bank_core_init(const char* db_path)`
-  * **Description**: Initializes SQLite3 database connection. Executes schema definitions to ensure tables (`accounts`, `transactions`) exist.
-  * **Returns**: `1` on success, `0` on database or initialization error.
-
-* `int bank_core_close(void)`
-  * **Description**: Closes active database connections and clean up allocations.
-  * **Returns**: `1` on success.
-
-* `int bank_core_get_account(const char* card_id, Account* out_account)`
-  * **Description**: Queries `accounts` database for matching `card_id` and copies column values into the provided `Account` struct pointer.
-  * **Returns**: `1` if account exists, `0` if not found or DB query errors.
-
-* `int bank_core_transaction(const char* from_card_id, const char* to_card_id, double amount)`
-  * **Description**: Executes a transactional transfer between accounts. Must run in an ACID safe SQLite `BEGIN TRANSACTION` block. Subtracts `amount` from `from_card_id`'s balance, adds it to `to_card_id`, and logs a row in `transactions`.
-  * **Returns**: `1` on transaction success, `0` on failure (e.g., insufficient funds, inactive account, invalid database connection).
-
-#### Flipper Serial Controller Functions
-* `int flipper_uart_open(const char* port_name)`
-  * **Description**: Resolves and opens COM connection to the specified port path (e.g., `COM3`, `\\.\COM10`). Applies DCB configuration and timeouts.
-  * **Returns**: `1` on successful serial handle bind, `0` on connection failure.
-
-* `int flipper_uart_close(void)`
-  * **Description**: Discards current Win32 Serial COM handle.
-  * **Returns**: `1` on success.
-
-* `int flipper_uart_scan_card(char* out_card_id, int max_len)`
-  * **Description**: Sends a query/ping signal command to Flipper Zero (e.g. `SCAN\n`), then waits to read a card UID or token string back.
-  * **Returns**: `1` on successful scan retrieval, `0` on timeout or transmission errors.
