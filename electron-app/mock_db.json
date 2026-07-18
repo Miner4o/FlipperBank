@@ -2,13 +2,13 @@
   "FLIP_CARD_001": {
     "card_id": "FLIP_CARD_001",
     "holder_name": "John Doe",
-    "balance": 130,
+    "balance": 110,
     "is_active": 1
   },
   "FLIP_CARD_002": {
     "card_id": "FLIP_CARD_002",
     "holder_name": "Alice Smith",
-    "balance": 1390.5,
+    "balance": 1410.5,
     "is_active": 1
   },
   "FLIP_CARD_003": {

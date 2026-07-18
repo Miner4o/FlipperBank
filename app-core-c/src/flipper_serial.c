@@ -65,18 +65,56 @@ const char* sendCommand(HANDLE hSerial, const char* command) {
 }
 
 void flipper_init(void){
+    sendCommand(g_hSerial, "ping");
+    if (strstr(globalResponse, "PONG") == NULL) {
+        logger("Flipper not responding to ping.\n");
+    } else {
+        logger("Flipper initialized successfully.\n");
+    }
 }
 
 void flipper_ping(void){
+    while(1) {
+        sendCommand(g_hSerial, "usb_nfc ping");
+        if (strstr(globalResponse, "PONG") == NULL) {
+            logger("Flipper not responding to ping.\n");
+        } else {
+            logger("Flipper is alive.\n");
+        }
+        Sleep(1000);
+    }
+}
+
+void flipper_read_card(void){
+    char uid[32];
+    sendCommand(g_hSerial, "usb_nfc scan");
+    if (strstr(globalResponse, "No card detected") != NULL) {
+        logger("No card detected.\n");
+    } else {
+        logger("Card detected.\n");
+    }
+    sendCommand(g_hSerial, "usb_nfc info");
+    if (strstr(globalResponse, "UID ") != NULL) {
+        strcpy(uid, strstr(globalResponse, "UID ") + 4);
+        logger("Card UID: %s\n", uid);
+    } else {
+        logger("Failed to get card info.\n");
+    }
 }
 
 void flipper_dump(void){
+    sendCommand(g_hSerial, "storage read /ext/nfc/card.nfc");
+    return globalResponse;
 }
 
 void flipper_info(void){
+    sendCommand(g_hSerial, "usb_nfc info");
+    return globalResponse;
 }
 
 void flipper_read(void){
+    sendCommand(g_hSerial, "usb_nfc read /ext/nfc/card.nfc");
+    return globalResponse;
 }
 
 void closeSerialPort(HANDLE hSerial) {

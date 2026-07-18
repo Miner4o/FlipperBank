@@ -278,6 +278,9 @@
     <!-- ==================== MODAL: SIMULATOR SCANNER OVERLAY ==================== -->
     <div id="scannerModal" class="modal-overlay">
       <div class="pixel-card modal-content">
+        <div class="custom-modal-icon-container">
+          <img src="../../assets/reading.png" alt="RFID Reading" class="custom-modal-icon" />
+        </div>
         <h3 class="pixel-font modal-title">CARD SCANNER SIMULATOR</h3>
         <p class="pixel-font modal-pulse">WAVE FLIPPER ZERO NEAR THE RFID READER</p>
         
@@ -307,6 +310,25 @@
         <button id="cancelScanBtn" class="pixel-btn-secondary pixel-font cancel-btn">
           [ CANCEL ]
         </button>
+      </div>
+    </div>
+
+    <!-- ==================== CUSTOM GENERIC MODAL OVERLAY ==================== -->
+    <div id="customModalOverlay">
+      <div id="customModal">
+        <div class="custom-modal-main-content" style="display: flex; align-items: center; gap: 16px; margin-bottom: 16px;">
+          <div id="customModalIconContainer" class="custom-modal-icon-container" style="display: none; flex-shrink: 0; margin-bottom: 0;">
+            <img id="customModalIcon" class="custom-modal-icon" src="" alt="Icon" />
+          </div>
+          <div class="custom-modal-text-content" style="flex-grow: 1; text-align: center;">
+            <h3 id="customModalTitle" class="pixel-font modal-title" style="margin-top: 0; margin-bottom: 6px;">TITLE</h3>
+            <p id="customModalBody" class="pixel-font" style="margin-bottom: 0; white-space: pre-wrap; font-size: 16px; line-height: 1.4; color: var(--retro-dark);"></p>
+          </div>
+        </div>
+        <div id="customModalInputWrap" class="input-group" style="display: none; margin-bottom: 16px; width: 100%;">
+          <input id="customModalInput" class="pixel-input pixel-font" type="text" style="width: 100%;" />
+        </div>
+        <div id="customModalButtons"></div>
       </div>
     </div>
 

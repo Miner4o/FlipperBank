@@ -188,14 +188,14 @@ document.getElementById('keypad-enter').addEventListener('click', () => {
   verifyPasscode();
 });
 
-function verifyPasscode() {
+async function verifyPasscode() {
   if (currentPin === '1234') {
     // Unlocked successfully
     currentPin = '';
     updatePinDisplay();
     showPage('login');
   } else {
-    alert("ACCESS DENIED: INCORRECT PASSCODE.");
+    await modalAlert("ACCESS DENIED: INCORRECT PASSCODE.", "SECURITY ERROR", "warning");
     currentPin = '';
     updatePinDisplay();
   }
@@ -291,6 +291,121 @@ document.getElementById('cancelScanBtn').addEventListener('click', () => {
   closeScanModal(null);
 });
 
+// ==================== CUSTOM GENERIC MODAL CONTROLLERS ====================
+const ICON_MAP = {
+  warning: '../../assets/warning.png',
+  warning2: '../../assets/warning2.png',
+  done: '../../assets/done.png',
+  saved: '../../assets/saved.png',
+  reading: '../../assets/reading.png',
+  admin: '../../assets/admin.png'
+};
+
+function showModal({ title = '', body = '', input = null, buttons = [], icon = '' }) {
+  return new Promise((resolve) => {
+    const overlay = document.getElementById('customModalOverlay');
+    const modalTitle = document.getElementById('customModalTitle');
+    const modalBody = document.getElementById('customModalBody');
+    const iconContainer = document.getElementById('customModalIconContainer');
+    const iconImg = document.getElementById('customModalIcon');
+    const inputWrap = document.getElementById('customModalInputWrap');
+    const inputEl = document.getElementById('customModalInput');
+    const btnBox = document.getElementById('customModalButtons');
+
+    // Title & Body
+    modalTitle.textContent = title;
+    modalBody.textContent = body;
+
+    // Icon setup
+    const iconPath = ICON_MAP[icon] || icon;
+    if (iconPath) {
+      iconImg.src = iconPath;
+      iconContainer.style.display = 'flex';
+    } else {
+      iconContainer.style.display = 'none';
+      iconImg.src = '';
+    }
+
+    // Input wrap
+    if (input) {
+      inputWrap.style.display = 'block';
+      inputEl.type = input.type || 'text';
+      inputEl.value = input.defaultValue || '';
+      if (input.placeholder) {
+        inputEl.placeholder = input.placeholder;
+      } else {
+        inputEl.placeholder = '';
+      }
+      setTimeout(() => inputEl.focus(), 50);
+    } else {
+      inputWrap.style.display = 'none';
+    }
+
+    // Cleanup and Resolve
+    const close = (result) => {
+      overlay.style.display = 'none';
+      inputEl.onkeydown = null;
+      resolve(result);
+    };
+
+    // Button generation
+    btnBox.innerHTML = '';
+    buttons.forEach((b) => {
+      const el = document.createElement('button');
+      el.className = b.className || (b.value === false || b.value === null ? 'pixel-btn-secondary pixel-font' : 'pixel-btn-action pixel-font');
+      el.textContent = b.label;
+      el.onclick = () => close(b.value === '$input' ? inputEl.value : b.value);
+      btnBox.appendChild(el);
+    });
+
+    // Keyboard handlers
+    inputEl.onkeydown = (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        close(inputEl.value);
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        close(null);
+      }
+    };
+
+    // Make visible
+    overlay.style.display = 'flex';
+  });
+}
+
+const modalAlert = (body, title = 'ALERT', icon = 'warning') =>
+  showModal({
+    title,
+    body,
+    icon,
+    buttons: [{ label: '[ OK ]', value: true }]
+  });
+
+const modalConfirm = (body, title = 'CONFIRMATION', icon = 'warning') =>
+  showModal({
+    title,
+    body,
+    icon,
+    buttons: [
+      { label: '[ YES ]', value: true },
+      { label: '[ NO ]', value: false }
+    ]
+  });
+
+const modalPrompt = (body, title = 'PROMPT', type = 'text', defaultValue = '', icon = 'reading') =>
+  showModal({
+    title,
+    body,
+    icon,
+    input: { type, defaultValue },
+    buttons: [
+      { label: '[ OK ]', value: '$input' },
+      { label: '[ CANCEL ]', value: null }
+    ]
+  });
+
 // ==================== HARDWARE COMM & SCAN LOGIC ====================
 async function scanHardwareCard() {
   if (isSimulationMode) {
@@ -323,12 +438,12 @@ async function scanHardwareCard() {
       if (res.ok) {
         return res.card_id;
       } else {
-        alert("Scan Failed: " + res.error);
+        await modalAlert("Scan Failed: " + res.error, "SCAN ERROR", "warning");
         return null;
       }
     } catch (err) {
       promptModal.classList.remove('active');
-      alert("Error scanning card: " + err.message);
+      await modalAlert("Error scanning card: " + err.message, "SCAN ERROR", "warning");
       return null;
     }
   }
@@ -381,7 +496,7 @@ document.getElementById('loginBtn').addEventListener('click', async () => {
   if (res.ok) {
     const acc = res.account;
     if (acc.is_active !== 1) {
-      alert(`Access Denied: Account associated with card [${cardId}] is suspended.`);
+      await modalAlert(`Access Denied: Account associated with card [${cardId}] is suspended.`, "ACCESS DENIED", "warning2");
       return;
     }
     
@@ -392,7 +507,7 @@ document.getElementById('loginBtn').addEventListener('click', async () => {
     
     showPage('menu');
   } else {
-    alert(`Authentication Error: Card ID [${cardId}] was not recognized by the bank core.`);
+    await modalAlert(`Authentication Error: Card ID [${cardId}] was not recognized by the bank core.`, "AUTH ERROR", "warning2");
   }
 });
 
@@ -402,7 +517,7 @@ document.getElementById('submitUserLoginBtn').addEventListener('click', async ()
   const passwordInput = document.getElementById('login-password-input').value;
 
   if (!emailInput || !passwordInput) {
-    alert("Please enter both email and password.");
+    await modalAlert("Please enter both email and password.", "INPUT REQUIRED", "reading");
     return;
   }
 
@@ -421,10 +536,10 @@ document.getElementById('submitUserLoginBtn').addEventListener('click', async ()
       
       showPage('menu');
     } else {
-      alert("Failed to load user account associated with profile.");
+      await modalAlert("Failed to load user account associated with profile.", "LOAD ERROR", "warning");
     }
   } else {
-    alert("AUTHENTICATION FAILED: Invalid email or password.");
+    await modalAlert("AUTHENTICATION FAILED: Invalid email or password.", "AUTH FAILED", "warning");
   }
 });
 
@@ -472,7 +587,7 @@ document.getElementById('menuBalanceBtn').addEventListener('click', async () => 
     
     showPage('balance');
   } else {
-    alert("Could not load fresh account balance details.");
+    await modalAlert("Could not load fresh account balance details.", "BALANCE ERROR", "warning");
   }
 });
 
@@ -492,12 +607,12 @@ triggerPaymentBtn.addEventListener('click', async () => {
   
   const amount = parseFloat(paymentAmountInput.value);
   if (isNaN(amount) || amount <= 0) {
-    alert("Please enter a valid payment amount.");
+    await modalAlert("Please enter a valid payment amount.", "VALIDATION ERROR", "warning");
     return;
   }
 
   if (currentAccount.balance < amount) {
-    alert(`Insufficient funds! Your balance is $${currentAccount.balance.toFixed(2)}`);
+    await modalAlert(`Insufficient funds! Your balance is $${currentAccount.balance.toFixed(2)}`, "INSUFFICIENT FUNDS", "warning2");
     return;
   }
 
@@ -506,7 +621,7 @@ triggerPaymentBtn.addEventListener('click', async () => {
   if (!scannedCardId) return;
 
   if (scannedCardId !== currentAccount.card_id) {
-    alert(`Card mismatch! Swiped card does not match the active session card.`);
+    await modalAlert(`Card mismatch! Swiped card does not match the active session card.`, "CARD MISMATCH", "warning2");
     return;
   }
 
@@ -523,7 +638,7 @@ triggerPaymentBtn.addEventListener('click', async () => {
     document.getElementById('receipt-new-balance').textContent = `$${currentAccount.balance.toFixed(2)}`;
     paymentSuccessCard.style.display = 'block';
   } else {
-    alert(`Payment Error: ${res.error || 'The core bank transaction was rejected.'}`);
+    await modalAlert(`Payment Error: ${res.error || 'The core bank transaction was rejected.'}`, "PAYMENT ERROR", "warning");
   }
 });
 

@@ -977,8 +977,8 @@ html, body, #app, #content, .page, .terminal-log {
 }
 
 @keyframes pulse-orange {
-  0% { opacity: 0.5; color: var(--retro-gray-lt); }
-  100% { opacity: 1; color: var(--flipper-orange-bright); }
+  0% { opacity: 0.6; color: var(--retro-gray-md); }
+  100% { opacity: 1; color: var(--flipper-orange); }
 }
 
 .modal-buttons {
@@ -989,9 +989,9 @@ html, body, #app, #content, .page, .terminal-log {
 }
 
 .sim-scan-card-btn {
-  background-color: var(--retro-gray-dk);
-  color: #fff;
-  border: 2px solid var(--retro-gray-lt);
+  background-color: var(--bg-secondary);
+  color: var(--retro-dark);
+  border: 2px solid var(--retro-gray-md);
   padding: 8px 12px;
   font-size: 16px;
   cursor: pointer;
@@ -1012,6 +1012,7 @@ html, body, #app, #content, .page, .terminal-log {
 .sim-scan-card-btn.data-suspended:hover {
   color: var(--danger-red);
   border-color: var(--danger-red);
+  background-color: var(--retro-dark);
 }
 
 .modal-divider {
@@ -1022,7 +1023,7 @@ html, body, #app, #content, .page, .terminal-log {
 
 .manual-scan-label {
   font-size: 16px;
-  color: var(--retro-gray-lt);
+  color: var(--retro-gray-md);
   margin-bottom: 6px;
   text-align: left;
 }
@@ -1033,15 +1034,102 @@ html, body, #app, #content, .page, .terminal-log {
   padding: 6px 10px;
 }
 
-/* OVERRIDE: Cancel button is white and stands out */
+/* OVERRIDE: Cancel button is full width */
 .cancel-btn {
   margin-top: 20px;
   width: 100%;
-  color: #ffffff !important;
-  border-color: #ffffff !important;
 }
 
-.cancel-btn:hover {
-  background-color: #ffffff !important;
-  color: var(--retro-dark) !important;
+/* Make scannerModal simulator content white */
+#scannerModal .pixel-card {
+  background-color: var(--bg-primary);
+  color: var(--retro-dark);
+  border: 4px solid var(--retro-dark);
+  box-shadow: 
+    inset -4px -4px 0px 0px var(--retro-gray-lt),
+    inset 4px 4px 0px 0px var(--flipper-orange),
+    8px 8px 0px 0px var(--retro-gray-md);
 }
+
+
+/* ==================== CUSTOM GENERIC MODAL ==================== */
+#customModalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(3px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: modalFadeIn 0.2s cubic-bezier(.2,.7,.2,1) both;
+}
+
+@keyframes modalFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+#customModal {
+  background-color: var(--bg-primary);
+  color: var(--retro-dark);
+  border: 4px solid var(--retro-dark);
+  padding: 24px;
+  max-width: 440px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 
+    inset -4px -4px 0px 0px var(--retro-gray-lt),
+    inset 4px 4px 0px 0px var(--flipper-orange),
+    8px 8px 0px 0px var(--retro-gray-md);
+  image-rendering: pixelated;
+  position: relative;
+  animation: modalPopIn 0.26s cubic-bezier(.2,.7,.2,1) both;
+}
+
+@keyframes modalPopIn {
+  from { opacity: 0; transform: translateY(12px) scale(.96); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.custom-modal-icon-container {
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 16px;
+}
+
+.custom-modal-icon {
+  max-height: 80px;
+  max-width: 80px;
+  object-fit: contain;
+}
+
+#customModalButtons {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+/* Ensure modal buttons look correct */
+#customModalButtons .pixel-btn-action {
+  margin-top: 0; /* Override default margin */
+  font-size: 20px;
+  padding: 8px 16px;
+  min-width: 100px;
+}
+
+#customModalButtons .pixel-btn-secondary {
+  font-size: 20px;
+  padding: 8px 16px;
+  min-width: 100px;
+}
+
+/* Override: user selection (scannerModal) png icon in center */
+#scannerModal .custom-modal-icon-container {
+  justify-content: center;
+}
+

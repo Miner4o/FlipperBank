@@ -40,6 +40,7 @@ BANK_CORE_API void flipper_ping(void);
 BANK_CORE_API void flipper_dump(void);
 BANK_CORE_API void flipper_info(void);
 BANK_CORE_API void flipper_read(void);
+BANK_CORE_API void flipper_read_card(void);
 BANK_CORE_API void closeSerialPort(HANDLE hSerial);
 
 // --- AES Cryptography Functions ---
