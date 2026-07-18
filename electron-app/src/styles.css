@@ -1107,6 +1107,11 @@ html, body, #app, #content, .page, .terminal-log {
   object-fit: contain;
 }
 
+#customModalIcon[src*="admin.png"] {
+  max-height: 140px;
+  max-width: 140px;
+}
+
 #customModalButtons {
   display: flex;
   justify-content: center;
