@@ -24,6 +24,8 @@ typedef struct {
 } Account;
 #pragma pack(pop)
 
+#include <stdbool.h>
+
 // --- Bank Core Functions (SQLite Database) ---
 BANK_CORE_API int bank_init(const char* db_path);
 BANK_CORE_API int bank_read(const char* card_id, Account* out_account);
@@ -32,15 +34,24 @@ BANK_CORE_API int bank_sqlite_add(Account* acc);
 BANK_CORE_API int bank_transaction(const char* from_card_id, const char* to_card_id, double amount);
 BANK_CORE_API int bank_create_person(const char* card_id, const char* name, double balance);
 
+// --- Electron App FFI Wrappers ---
+BANK_CORE_API int bank_core_init(const char* db_path);
+BANK_CORE_API int bank_core_close(void);
+BANK_CORE_API int bank_core_get_account(const char* card_id, Account* out_account);
+BANK_CORE_API int bank_core_transaction(const char* from_card_id, const char* to_card_id, double amount);
+BANK_CORE_API int flipper_uart_open(const char* portName);
+BANK_CORE_API int flipper_uart_close(void);
+BANK_CORE_API int flipper_uart_scan_card(char* out_card_id, int max_len);
+
 // --- Flipper Serial UART Functions ---
 BANK_CORE_API HANDLE openSerialPort(const char* portName);
 BANK_CORE_API const char* sendCommand(HANDLE hSerial, const char* command);
-BANK_CORE_API void flipper_init(void);
+BANK_CORE_API bool flipper_init(void);
 BANK_CORE_API void flipper_ping(void);
-BANK_CORE_API void flipper_dump(void);
-BANK_CORE_API void flipper_info(void);
-BANK_CORE_API void flipper_read(void);
-BANK_CORE_API void flipper_read_card(void);
+BANK_CORE_API const char* flipper_dump(void);
+BANK_CORE_API const char* flipper_info(void);
+BANK_CORE_API const char* flipper_read(void);
+BANK_CORE_API const char* flipper_read_card(void);
 BANK_CORE_API void closeSerialPort(HANDLE hSerial);
 
 // --- AES Cryptography Functions ---

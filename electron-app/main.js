@@ -41,11 +41,9 @@ function saveMockDatabase() {
 }
 
 // C DLL bindings (will load if dependencies and DLL are present)
-let ffi = null;
-let ref = null;
+let koffi = null;
 let dll = null;
 let AccountStruct = null;
-let AccountPtr = null;
 
 const DLL_PATHS = [
   path.join(__dirname, '..', 'app-core-c', 'bank_core.dll'),
@@ -55,10 +53,7 @@ const DLL_PATHS = [
 
 function tryLoadDLL() {
   try {
-    // Try importing dependencies
-    ffi = require('ffi-napi');
-    ref = require('ref-napi');
-    const StructType = require('ref-struct-di')(ref);
+    koffi = require('koffi');
 
     // Find if the DLL actually exists
     let dllPath = null;
@@ -75,31 +70,32 @@ function tryLoadDLL() {
       return;
     }
 
-    console.log(`Found bank_core.dll at: ${dllPath}. Loading...`);
+    console.log(`Found bank_core.dll at: ${dllPath}. Loading via Koffi...`);
+
+    const lib = koffi.load(dllPath);
 
     // Define the Account structure (matching C: Account struct)
-    AccountStruct = StructType({
-      card_id: ref.types.charArray(64),
-      holder_name: ref.types.charArray(128),
-      balance: ref.types.double,
-      is_active: ref.types.int
+    AccountStruct = koffi.struct('Account', {
+      card_id: koffi.array('char', 64),
+      holder_name: koffi.array('char', 128),
+      balance: 'double',
+      is_active: 'int'
     });
-    AccountPtr = ref.refType(AccountStruct);
 
     // Declare DLL function signatures
-    dll = ffi.Library(dllPath, {
-      'bank_core_init': ['int', ['string']],
-      'bank_core_close': ['int', []],
-      'bank_core_get_account': ['int', ['string', AccountPtr]],
-      'bank_core_transaction': ['int', ['string', 'string', 'double']],
-      'flipper_uart_open': ['int', ['string']],
-      'flipper_uart_close': ['int', []],
-      'flipper_uart_scan_card': ['int', [ref.refType(ref.types.char), 'int']]
-    });
+    dll = {
+      bank_core_init: lib.func('int bank_core_init(const char* db_path)'),
+      bank_core_close: lib.func('int bank_core_close(void)'),
+      bank_core_get_account: lib.func('int bank_core_get_account(const char* card_id, Account* out_account)'),
+      bank_core_transaction: lib.func('int bank_core_transaction(const char* from_card_id, const char* to_card_id, double amount)'),
+      flipper_uart_open: lib.func('int flipper_uart_open(const char* portName)'),
+      flipper_uart_close: lib.func('int flipper_uart_close(void)'),
+      flipper_uart_scan_card: lib.func('int flipper_uart_scan_card(char* out_card_id, int max_len)')
+    };
 
-    console.log("Successfully bound to bank_core.dll!");
+    console.log("Successfully bound to bank_core.dll via Koffi!");
   } catch (e) {
-    console.warn("Failed to load ffi-napi, ref-napi, or DLL. Starting in Simulated Mode.", e.message);
+    console.warn("Failed to load koffi or DLL. Starting in Simulated Mode.", e.message);
     isSimulatedMode = true;
   }
 }
@@ -193,6 +189,25 @@ ipcMain.handle('db:init', async (event, dbPath) => {
 ipcMain.handle('db:getAccount', async (event, cardId) => {
   if (isSimulatedMode) {
     loadMockDatabase(); // Reload latest state
+    
+    let adminExists = false;
+    for (const key in mockDatabase) {
+      if (mockDatabase[key] && mockDatabase[key].holder_name === "Admin") {
+        adminExists = true;
+        break;
+      }
+    }
+    
+    if (!adminExists) {
+      mockDatabase[cardId] = {
+        card_id: cardId,
+        holder_name: "Admin",
+        balance: 1000000.00,
+        is_active: 1
+      };
+      saveMockDatabase();
+    }
+    
     const acc = mockDatabase[cardId];
     if (acc) {
       return { ok: true, account: { ...acc } };
@@ -201,13 +216,12 @@ ipcMain.handle('db:getAccount', async (event, cardId) => {
   }
 
   try {
-    // Allocate Account struct in memory
-    const account = new AccountStruct();
-    const res = dll.bank_core_get_account(cardId, account.ref());
+    const account_buf = Buffer.alloc(koffi.sizeof(AccountStruct));
+    const res = dll.bank_core_get_account(cardId, account_buf);
     if (res === 1) {
-      // Decode C-strings
-      const id = account.card_id.toString().replace(/\u0000/g, '').trim();
-      const name = account.holder_name.toString().replace(/\u0000/g, '').trim();
+      const account = koffi.decode(account_buf, AccountStruct);
+      const id = String(account.card_id).replace(/\u0000/g, '').trim();
+      const name = String(account.holder_name).replace(/\u0000/g, '').trim();
       return {
         ok: true,
         account: {
@@ -291,17 +305,14 @@ ipcMain.handle('uart:close', async (event) => {
 
 ipcMain.handle('uart:scanCard', async (event) => {
   if (isSimulatedMode) {
-    // In simulated mode, we let the frontend resolve simulation mock selection.
-    // However, we still return OK to indicate we are ready.
     return { ok: true, mode: 'simulated' };
   }
 
   try {
-    // Allocate a buffer of 64 bytes for output string
     const buf = Buffer.alloc(64);
     const res = dll.flipper_uart_scan_card(buf, 64);
     if (res === 1) {
-      const cardId = ref.readCString(buf, 0);
+      const cardId = buf.toString().replace(/\u0000/g, '').trim();
       return { ok: true, card_id: cardId };
     }
     return { ok: false, error: 'Scan timed out or serial transmission error' };

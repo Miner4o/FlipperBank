@@ -15,9 +15,14 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@electron/rebuild": "^4.2.0",
     "electron": "^31.7.7"
   },
   "allowScripts": {
-    "electron@31.7.7": true
+    "electron@31.7.7": true,
+    "koffi": true
+  },
+  "dependencies": {
+    "koffi": "^3.1.1"
   }
 }

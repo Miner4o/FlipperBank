@@ -412,40 +412,44 @@ async function scanHardwareCard() {
     // Open the mock overlay select dialog
     return await openScanModal();
   } else {
-    // Call C DLL serial ping
-    // We open a basic feedback overlay to let user know serial is querying
-    const promptModal = document.getElementById('scannerModal');
-    promptModal.classList.add('active');
+    // Show the custom modal message box using the reading.png icon
+    let cancelScan = false;
     
-    // Hide simulator options during native scan
-    promptModal.querySelector('.modal-buttons').style.display = 'none';
-    promptModal.querySelector('.modal-divider').style.display = 'none';
-    promptModal.querySelector('.manual-scan-label').style.display = 'none';
-    promptModal.querySelector('.input-group').style.display = 'none';
-    promptModal.querySelector('.modal-pulse').textContent = "QUERYING SERIAL COM PORT...";
+    const modalPromise = showModal({
+      title: "SCAN NFC CARD",
+      body: "WAVE FLIPPER ZERO NEAR THE RFID READER\n\nQuerying serial COM port...",
+      icon: "reading",
+      buttons: [
+        { label: "[ CANCEL ]", value: null }
+      ]
+    }).then(result => {
+      cancelScan = true;
+      return null;
+    });
 
-    try {
-      const res = await window.api.uart.scanCard();
-      promptModal.classList.remove('active');
-      
-      // Restore layout for future
-      promptModal.querySelector('.modal-buttons').style.display = 'flex';
-      promptModal.querySelector('.modal-divider').style.display = 'block';
-      promptModal.querySelector('.manual-scan-label').style.display = 'block';
-      promptModal.querySelector('.input-group').style.display = 'flex';
-      promptModal.querySelector('.modal-pulse').textContent = "WAVE FLIPPER ZERO NEAR THE RFID READER";
-
-      if (res.ok) {
-        return res.card_id;
-      } else {
-        await modalAlert("Scan Failed: " + res.error, "SCAN ERROR", "warning");
+    const scanPromise = (async () => {
+      try {
+        const res = await window.api.uart.scanCard();
+        if (cancelScan) return null;
+        
+        // Close the modal
+        document.getElementById('customModalOverlay').style.display = 'none';
+        
+        if (res.ok) {
+          return res.card_id;
+        } else {
+          await modalAlert("Scan Failed: " + res.error, "SCAN ERROR", "warning");
+          return null;
+        }
+      } catch (err) {
+        if (cancelScan) return null;
+        document.getElementById('customModalOverlay').style.display = 'none';
+        await modalAlert("Error scanning card: " + err.message, "SCAN ERROR", "warning");
         return null;
       }
-    } catch (err) {
-      promptModal.classList.remove('active');
-      await modalAlert("Error scanning card: " + err.message, "SCAN ERROR", "warning");
-      return null;
-    }
+    })();
+
+    return await Promise.race([modalPromise, scanPromise]);
   }
 }
 
@@ -453,6 +457,10 @@ async function scanHardwareCard() {
 async function initializeApp() {
   // Check if we are running in simulated or native mode
   isSimulationMode = await window.api.uart.isSimulated();
+  
+  // Set pointer cursors
+  document.getElementById('simulated-badge').style.cursor = 'pointer';
+  document.getElementById('connection-status').style.cursor = 'pointer';
   
   if (isSimulationMode) {
     document.getElementById('simulated-badge').style.display = 'block';
@@ -483,6 +491,66 @@ async function initializeApp() {
   }
 }
 
+async function promptComPortSelection() {
+  const selectedPort = await showModal({
+    title: "SELECT COM PORT",
+    body: "Choose the serial port to establish native communication with your Flipper Zero, or choose MOCK_COM to run in Simulated Mode.",
+    icon: "reading",
+    buttons: [
+      { label: "[ COM1 ]", value: "COM1" },
+      { label: "[ COM2 ]", value: "COM2" },
+      { label: "[ COM3 ]", value: "COM3" },
+      { label: "[ COM4 ]", value: "COM4" },
+      { label: "[ MOCK_COM ]", value: "MOCK_COM" },
+      { label: "[ CANCEL ]", value: null }
+    ]
+  });
+
+  if (!selectedPort) return;
+
+  const connStatus = document.getElementById('connection-status');
+  connStatus.className = 'status-offline';
+  topbar.statusText.textContent = "CONNECTING...";
+
+  try {
+    const uartRes = await window.api.uart.open(selectedPort);
+    if (uartRes.ok) {
+      if (selectedPort === "MOCK_COM" || uartRes.mode === 'simulated') {
+        isSimulationMode = true;
+        document.getElementById('simulated-badge').style.display = 'block';
+        connStatus.className = 'status-online';
+        topbar.statusText.textContent = "SIMULATED";
+        await modalAlert("Switched to Simulated Mode successfully.", "CONNECTED", "done");
+      } else {
+        // Native mode
+        const dbRes = await window.api.db.init("bank.db");
+        if (dbRes.ok) {
+          isSimulationMode = false;
+          document.getElementById('simulated-badge').style.display = 'none';
+          connStatus.className = 'status-online';
+          topbar.statusText.textContent = `ONLINE (${selectedPort})`;
+          await modalAlert(`Connected to Flipper Zero on ${selectedPort} successfully!`, "CONNECTED", "done");
+        } else {
+          connStatus.className = 'status-offline';
+          topbar.statusText.textContent = "DB ERROR";
+          await modalAlert("Connected to COM port but failed to initialize SQLite database.", "CONNECTION ERROR", "warning2");
+        }
+      }
+    } else {
+      connStatus.className = 'status-offline';
+      topbar.statusText.textContent = "COM ERROR";
+      await modalAlert(`Failed to connect to port ${selectedPort}.`, "CONNECTION ERROR", "warning2");
+    }
+  } catch (err) {
+    connStatus.className = 'status-offline';
+    topbar.statusText.textContent = "ERROR";
+    await modalAlert(`Error opening COM port: ${err.message}`, "CONNECTION ERROR", "warning2");
+  }
+}
+
+document.getElementById('simulated-badge').addEventListener('click', promptComPortSelection);
+document.getElementById('connection-status').addEventListener('click', promptComPortSelection);
+
 // Initialize on boot
 initializeApp();
 
@@ -500,10 +568,22 @@ document.getElementById('loginBtn').addEventListener('click', async () => {
       return;
     }
     
+    if (acc.holder_name !== 'Admin') {
+      await modalAlert(`Access Denied: Account [${acc.holder_name}] is not an administrator.`, "ACCESS DENIED", "warning");
+      return;
+    }
+    
     // Login successful
     currentAccount = acc;
     document.getElementById('user-display-name').textContent = acc.holder_name;
     document.getElementById('user-display-card').textContent = acc.card_id;
+    
+    await showModal({
+      title: "ADMIN ACCESS GRANTED",
+      body: `Welcome, ${acc.holder_name}.\nAccess to Flipper Bank terminal is unlocked.`,
+      icon: "admin",
+      buttons: [{ label: "[ ENTER TERMINAL ]", value: true }]
+    });
     
     showPage('menu');
   } else {
