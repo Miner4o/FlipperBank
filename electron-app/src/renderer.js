@@ -223,24 +223,8 @@ window.addEventListener('keydown', (e) => {
 });
 
 // ==================== LOGIN ADMIN/USER SWITCHING ====================
-const toggleAdminBtn = document.getElementById('toggleAdminBtn');
-const toggleUserBtn = document.getElementById('toggleUserBtn');
-const adminLoginView = document.getElementById('admin-login-view');
-const userLoginView = document.getElementById('user-login-view');
+// (Removed non-existent admin/user view toggling elements)
 
-toggleAdminBtn.addEventListener('click', () => {
-  toggleAdminBtn.classList.add('active');
-  toggleUserBtn.classList.remove('active');
-  adminLoginView.style.display = 'flex';
-  userLoginView.style.display = 'none';
-});
-
-toggleUserBtn.addEventListener('click', () => {
-  toggleUserBtn.classList.add('active');
-  toggleAdminBtn.classList.remove('active');
-  userLoginView.style.display = 'flex';
-  adminLoginView.style.display = 'none';
-});
 
 // ==================== CARD SCANNER SIMULATION MODAL ====================
 const scannerModal = document.getElementById('scannerModal');
@@ -301,7 +285,8 @@ const ICON_MAP = {
   admin: '../../assets/admin.png'
 };
 
-function showModal({ title = '', body = '', input = null, buttons = [], icon = '' }) {
+function showModal({ title = '', body = '', input = null, fields = null, buttons = [], icon = '' }) {
+  if (window.api && window.api.log) window.api.log("showModal called with title: " + title);
   return new Promise((resolve) => {
     const overlay = document.getElementById('customModalOverlay');
     const modalTitle = document.getElementById('customModalTitle');
@@ -310,6 +295,7 @@ function showModal({ title = '', body = '', input = null, buttons = [], icon = '
     const iconImg = document.getElementById('customModalIcon');
     const inputWrap = document.getElementById('customModalInputWrap');
     const inputEl = document.getElementById('customModalInput');
+    const dynamicContent = document.getElementById('customModalDynamicContent');
     const btnBox = document.getElementById('customModalButtons');
 
     // Title & Body
@@ -341,6 +327,49 @@ function showModal({ title = '', body = '', input = null, buttons = [], icon = '
       inputWrap.style.display = 'none';
     }
 
+    // Dynamic fields content
+    if (fields) {
+      dynamicContent.style.display = 'block';
+      dynamicContent.innerHTML = '';
+      fields.forEach(f => {
+        const fieldDiv = document.createElement('div');
+        fieldDiv.className = 'form-field';
+        fieldDiv.style.marginBottom = '12px';
+        fieldDiv.style.textAlign = 'left';
+
+        const label = document.createElement('label');
+        label.className = 'pixel-font';
+        label.style.color = 'var(--flipper-orange)';
+        label.style.fontSize = '16px';
+        label.style.fontWeight = 'bold';
+        label.style.display = 'block';
+        label.style.marginBottom = '6px';
+        label.textContent = f.label;
+
+        const inputContainer = document.createElement('div');
+        inputContainer.className = 'input-container';
+
+        const inputField = document.createElement('input');
+        inputField.id = f.id;
+        inputField.className = 'pixel-input pixel-font';
+        inputField.type = f.type || 'text';
+        inputField.placeholder = f.placeholder || '';
+        inputField.value = f.defaultValue || '';
+        if (f.step) inputField.step = f.step;
+        if (f.min) inputField.min = f.min;
+
+        inputContainer.appendChild(inputField);
+        fieldDiv.appendChild(label);
+        fieldDiv.appendChild(inputContainer);
+        dynamicContent.appendChild(fieldDiv);
+      });
+      const firstInput = dynamicContent.querySelector('input');
+      if (firstInput) setTimeout(() => firstInput.focus(), 50);
+    } else {
+      dynamicContent.style.display = 'none';
+      dynamicContent.innerHTML = '';
+    }
+
     // Cleanup and Resolve
     const close = (result) => {
       overlay.style.display = 'none';
@@ -354,7 +383,22 @@ function showModal({ title = '', body = '', input = null, buttons = [], icon = '
       const el = document.createElement('button');
       el.className = b.className || (b.value === false || b.value === null ? 'pixel-btn-secondary pixel-font' : 'pixel-btn-action pixel-font');
       el.textContent = b.label;
-      el.onclick = () => close(b.value === '$input' ? inputEl.value : b.value);
+      el.onclick = () => {
+        if (b.value === '$input') {
+          if (fields) {
+            const data = {};
+            fields.forEach(f => {
+              const elVal = document.getElementById(f.id);
+              data[f.id] = elVal ? elVal.value : '';
+            });
+            close(data);
+          } else {
+            close(inputEl.value);
+          }
+        } else {
+          close(b.value);
+        }
+      };
       btnBox.appendChild(el);
     });
 
@@ -492,6 +536,7 @@ async function initializeApp() {
 }
 
 async function promptComPortSelection() {
+  if (window.api && window.api.log) window.api.log("promptComPortSelection called!");
   const selectedPort = await showModal({
     title: "SELECT COM PORT",
     body: "Choose the serial port to establish native communication with your Flipper Zero, or choose MOCK_COM to run in Simulated Mode.",
@@ -548,78 +593,100 @@ async function promptComPortSelection() {
   }
 }
 
-document.getElementById('simulated-badge').addEventListener('click', promptComPortSelection);
-document.getElementById('connection-status').addEventListener('click', promptComPortSelection);
+document.getElementById('simulated-badge').addEventListener('click', () => {
+  if (window.api && window.api.log) window.api.log("simulated-badge clicked!");
+  promptComPortSelection();
+});
+document.getElementById('connection-status').addEventListener('click', () => {
+  if (window.api && window.api.log) window.api.log("connection-status clicked!");
+  promptComPortSelection();
+});
 
 // Initialize on boot
 initializeApp();
 
 // ==================== LOGIN CONTROLLER ====================
-// Admin (NFC Card scan)
+// Scan NFC Card Login / Register
 document.getElementById('loginBtn').addEventListener('click', async () => {
   const cardId = await scanHardwareCard();
   if (!cardId) return; // User cancelled or error occurred
 
-  const res = await window.api.db.getAccount(cardId);
-  if (res.ok) {
-    const acc = res.account;
-    if (acc.is_active !== 1) {
-      await modalAlert(`Access Denied: Account associated with card [${cardId}] is suspended.`, "ACCESS DENIED", "warning2");
-      return;
-    }
-    
-    if (acc.holder_name !== 'Admin') {
-      await modalAlert(`Access Denied: Account [${acc.holder_name}] is not an administrator.`, "ACCESS DENIED", "warning");
-      return;
-    }
-    
-    // Login successful
-    currentAccount = acc;
-    document.getElementById('user-display-name').textContent = acc.holder_name;
-    document.getElementById('user-display-card').textContent = acc.card_id;
-    
-    await showModal({
-      title: "ADMIN ACCESS GRANTED",
-      body: `Welcome, ${acc.holder_name}.\nAccess to Flipper Bank terminal is unlocked.`,
-      icon: "admin",
-      buttons: [{ label: "[ ENTER TERMINAL ]", value: true }]
-    });
-    
-    showPage('menu');
-  } else {
-    await modalAlert(`Authentication Error: Card ID [${cardId}] was not recognized by the bank core.`, "AUTH ERROR", "warning2");
-  }
-});
-
-// User (Email & Password credentials manual login)
-document.getElementById('submitUserLoginBtn').addEventListener('click', async () => {
-  const emailInput = document.getElementById('login-email-input').value.trim();
-  const passwordInput = document.getElementById('login-password-input').value;
-
-  if (!emailInput || !passwordInput) {
-    await modalAlert("Please enter both email and password.", "INPUT REQUIRED", "reading");
-    return;
-  }
-
-  // Validate credentials in simulated mode (mock login values)
-  if (emailInput === 'user@flipper.com' && passwordInput === 'password123') {
-    // Fetch card account associated with John Doe FLIP_CARD_001
-    const res = await window.api.db.getAccount('FLIP_CARD_001');
+  // Check if account exists
+  const checkRes = await window.api.db.checkPerson(cardId);
+  if (checkRes.ok && checkRes.exists) {
+    // Read the account
+    const res = await window.api.db.getAccount(cardId);
     if (res.ok) {
-      currentAccount = res.account;
-      document.getElementById('user-display-name').textContent = currentAccount.holder_name;
-      document.getElementById('user-display-card').textContent = currentAccount.card_id;
+      const acc = res.account;
+      if (acc.is_active !== 1) {
+        await modalAlert(`Access Denied: Account associated with card [${cardId}] is suspended.`, "ACCESS DENIED", "warning2");
+        return;
+      }
       
-      // Clean form fields
-      document.getElementById('login-email-input').value = '';
-      document.getElementById('login-password-input').value = '';
+      // Login successful
+      currentAccount = acc;
+      document.getElementById('user-display-name').textContent = acc.holder_name;
+      document.getElementById('user-display-card').textContent = acc.card_id;
+      
+      await showModal({
+        title: "ACCESS GRANTED",
+        body: `Welcome, ${acc.holder_name}.\nAccess to Flipper Bank terminal is unlocked.`,
+        icon: "admin",
+        buttons: [{ label: "[ ENTER TERMINAL ]", value: true }]
+      });
       
       showPage('menu');
     } else {
-      await modalAlert("Failed to load user account associated with profile.", "LOAD ERROR", "warning");
+      await modalAlert(`Error loading account details: ${res.error}`, "LOAD ERROR", "warning2");
     }
   } else {
-    await modalAlert("AUTHENTICATION FAILED: Invalid email or password.", "AUTH FAILED", "warning");
+    // Unrecognized card (empty card) -> Show registration form!
+    const regResult = await showModal({
+      title: "UNREGISTERED CARD DETECTED",
+      body: `Card ID [${cardId}] is not in the database.\nWould you like to register it now?`,
+      icon: "reading",
+      fields: [
+        { id: 'reg-name', label: 'HOLDER NAME:', type: 'text', placeholder: 'Enter full name' },
+        { id: 'reg-balance', label: 'INITIAL DEPOSIT ($):', type: 'number', placeholder: '0.00', step: '0.01', min: '0', defaultValue: '100.00' }
+      ],
+      buttons: [
+        { label: "[ REGISTER ]", value: "$input" },
+        { label: "[ CANCEL ]", value: null }
+      ]
+    });
+
+    if (regResult) {
+      const name = regResult['reg-name'] ? regResult['reg-name'].trim() : '';
+      const balance = parseFloat(regResult['reg-balance'] || '0');
+
+      if (!name) {
+        await modalAlert("Holder Name cannot be empty.", "REGISTRATION ERROR", "warning");
+        return;
+      }
+      if (isNaN(balance) || balance < 0) {
+        await modalAlert("Initial Deposit must be a valid non-negative number.", "REGISTRATION ERROR", "warning");
+        return;
+      }
+
+      // Create person
+      const createRes = await window.api.db.createPerson(cardId, name, balance);
+      if (createRes.ok) {
+        // Read new account
+        const res = await window.api.db.getAccount(cardId);
+        if (res.ok) {
+          currentAccount = res.account;
+          document.getElementById('user-display-name').textContent = currentAccount.holder_name;
+          document.getElementById('user-display-card').textContent = currentAccount.card_id;
+          
+          await modalAlert(`Account registered successfully for ${name}!`, "REGISTRATION COMPLETE", "done");
+          showPage('menu');
+        } else {
+          await modalAlert("Account registered but failed to reload details.", "LOAD ERROR", "warning");
+        }
+      } else {
+        await modalAlert(`Registration Failed: ${createRes.error || 'Check Flipper write state.'}`, "REGISTRATION ERROR", "warning2");
+      }
+    }
   }
 });
 

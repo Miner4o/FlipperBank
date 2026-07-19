@@ -7,7 +7,7 @@ LDFLAGS = -shared
 LDLIBS = -lkernel32 -lpthread
 
 TARGET = bank_core.dll
-SRCS = src/flipper_serial.c src/bank_core.c src/aes_crypt.c src/sqlite3.c
+SRCS = src/flipper_serial.c src/bank_core.c src/sqlite3.c src/aes_crypt.c
 OBJS = $(SRCS:.c=.o)
 
 .PHONY: all clean

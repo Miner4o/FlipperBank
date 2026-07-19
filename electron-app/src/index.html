@@ -18,9 +18,11 @@
         <span id="brand-text" class="pixel-font">FLIPPER<span class="highlight">BANK</span></span>
       </div>
 
-      <div id="connection-status" class="status-offline">
-        <span class="status-dot"></span>
-        <span id="status-text" class="pixel-font">OFFLINE</span>
+      <div class="connection-status-wrapper" style="-webkit-app-region: no-drag !important; pointer-events: auto !important;">
+        <button id="connection-status" class="status-offline">
+          <span class="status-dot"></span>
+          <span id="status-text" class="pixel-font">OFFLINE</span>
+        </button>
       </div>
 
       <!-- Window Controls (Minimize, Maximize/Restore, Close) -->
@@ -82,15 +84,8 @@
       <section id="loginPage" class="page">
         <div class="login-container">
           <h1 class="pixel-font welcome-title">FLIPPER BANK v1.0</h1>
-          <p class="pixel-font welcome-subtitle">SELECT ACCESS MODE</p>
+          <p class="pixel-font welcome-subtitle">SCAN NFC CARD TO LOG IN</p>
 
-          <!-- Toggle group between Admin & User login modes -->
-          <div id="login-mode-select" class="mode-toggle-group">
-            <button id="toggleAdminBtn" class="toggle-btn active pixel-font">ADMIN (NFC SCAN)</button>
-            <button id="toggleUserBtn" class="toggle-btn pixel-font">USER (CREDENTIALS)</button>
-          </div>
-
-          <!-- ADMIN NFC SCAN LOGIN VIEW -->
           <div id="admin-login-view" class="login-view-mode active">
             <button id="loginBtn" class="pixel-card-btn big-btn">
               <div class="btn-content">
@@ -103,24 +98,6 @@
               </div>
             </button>
             <p class="pixel-font view-hint">WAITING FOR RFID TOKEN (MIFARE CLASSIC)</p>
-          </div>
-
-          <!-- USER MANUAL EMAIL & PASSWORD LOGIN VIEW -->
-          <div id="user-login-view" class="login-view-mode" style="display: none;">
-            <div class="form-card pixel-card user-login-card">
-              <div class="form-field">
-                <label class="pixel-font">EMAIL ADDRESS:</label>
-                <input type="email" id="login-email-input" class="pixel-input pixel-font login-field" placeholder="user@flipper.com" />
-              </div>
-              <div class="form-field">
-                <label class="pixel-font">PASSWORD:</label>
-                <input type="password" id="login-password-input" class="pixel-input pixel-font login-field" placeholder="••••••••" />
-              </div>
-              <button id="submitUserLoginBtn" class="pixel-btn-action pixel-font">
-                [ LOGIN USER ]
-              </button>
-            </div>
-            <p class="pixel-font view-hint">MOCK: user@flipper.com / password123</p>
           </div>
           
           <div id="simulated-badge" class="pixel-font" style="display: none;">[ SIMULATION MODE ACTIVE ]</div>
@@ -328,6 +305,7 @@
         <div id="customModalInputWrap" class="input-group" style="display: none; margin-bottom: 16px; width: 100%;">
           <input id="customModalInput" class="pixel-input pixel-font" type="text" style="width: 100%;" />
         </div>
+        <div id="customModalDynamicContent" style="display: none; margin-bottom: 16px; width: 100%;"></div>
         <div id="customModalButtons"></div>
       </div>
     </div>

@@ -8,6 +8,19 @@ let mainWindow = null;
 let isSimulatedMode = false;
 let dbLoaded = false;
 let uartOpened = false;
+let g_serialHandle = null;
+
+function isValidHandle(h) {
+  if (!h) return false;
+  let addr;
+  try {
+    addr = koffi.address(h);
+  } catch {
+    return false;
+  }
+  const big = typeof addr === 'bigint' ? addr : BigInt(addr);
+  return big !== 0n && big !== 0xFFFFFFFFFFFFFFFFn && big !== 0xFFFFFFFFn;
+}
 
 // Mock database state path
 const MOCK_DB_PATH = path.join(__dirname, 'mock_db.json');
@@ -84,13 +97,15 @@ function tryLoadDLL() {
 
     // Declare DLL function signatures
     dll = {
-      bank_core_init: lib.func('int bank_core_init(const char* db_path)'),
-      bank_core_close: lib.func('int bank_core_close(void)'),
-      bank_core_get_account: lib.func('int bank_core_get_account(const char* card_id, Account* out_account)'),
-      bank_core_transaction: lib.func('int bank_core_transaction(const char* from_card_id, const char* to_card_id, double amount)'),
-      flipper_uart_open: lib.func('int flipper_uart_open(const char* portName)'),
-      flipper_uart_close: lib.func('int flipper_uart_close(void)'),
-      flipper_uart_scan_card: lib.func('int flipper_uart_scan_card(char* out_card_id, int max_len)')
+      bank_init: lib.func('int bank_init(const char* db_path)'),
+      bank_close: lib.func('int bank_close(void)'),
+      bank_read: lib.func('int bank_read(const char* card_id, Account* out_account)'),
+      bank_transaction: lib.func('int bank_transaction(const char* from_card_id, const char* to_card_id, double amount)'),
+      bank_check_person: lib.func('int bank_check_person(const char* card_id)'),
+      bank_create_person: lib.func('int bank_create_person(const char* card_id, const char* name, double balance)'),
+      openSerialPort: lib.func('void* openSerialPort(const char* portName)'),
+      closeSerialPort: lib.func('void closeSerialPort(void* hSerial)'),
+      flipper_read_card: lib.func('const char* flipper_read_card(void)')
     };
 
     console.log("Successfully bound to bank_core.dll via Koffi!");
@@ -124,6 +139,8 @@ function createWindow() {
 
   mainWindow.setMenuBarVisibility(false);
   mainWindow.loadFile(path.join(__dirname, 'src', 'index.html'));
+  // DevTools is disabled for production styling
+
 
   // Handle window zoom shortcuts
   const wc = mainWindow.webContents;
@@ -147,6 +164,10 @@ function createWindow() {
   mainWindow.on('maximize', sendMaximized);
   mainWindow.on('unmaximize', sendMaximized);
 }
+
+ipcMain.on('log', (event, msg) => {
+  console.log("RENDERER_LOG:", msg);
+});
 
 // Electron Window lifecycle IPCs
 ipcMain.on('win:minimize', () => {
@@ -175,7 +196,7 @@ ipcMain.handle('db:init', async (event, dbPath) => {
   }
 
   try {
-    const res = dll.bank_core_init(dbPath || "bank.db");
+    const res = dll.bank_init(dbPath || "bank.db");
     if (res === 1) {
       dbLoaded = true;
       return { ok: true, mode: 'native' };
@@ -189,25 +210,6 @@ ipcMain.handle('db:init', async (event, dbPath) => {
 ipcMain.handle('db:getAccount', async (event, cardId) => {
   if (isSimulatedMode) {
     loadMockDatabase(); // Reload latest state
-    
-    let adminExists = false;
-    for (const key in mockDatabase) {
-      if (mockDatabase[key] && mockDatabase[key].holder_name === "Admin") {
-        adminExists = true;
-        break;
-      }
-    }
-    
-    if (!adminExists) {
-      mockDatabase[cardId] = {
-        card_id: cardId,
-        holder_name: "Admin",
-        balance: 1000000.00,
-        is_active: 1
-      };
-      saveMockDatabase();
-    }
-    
     const acc = mockDatabase[cardId];
     if (acc) {
       return { ok: true, account: { ...acc } };
@@ -217,7 +219,7 @@ ipcMain.handle('db:getAccount', async (event, cardId) => {
 
   try {
     const account_buf = Buffer.alloc(koffi.sizeof(AccountStruct));
-    const res = dll.bank_core_get_account(cardId, account_buf);
+    const res = dll.bank_read(cardId, account_buf);
     if (res === 1) {
       const account = koffi.decode(account_buf, AccountStruct);
       const id = String(account.card_id).replace(/\u0000/g, '').trim();
@@ -233,6 +235,44 @@ ipcMain.handle('db:getAccount', async (event, cardId) => {
       };
     }
     return { ok: false, error: 'Account not found in DLL database' };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
+
+ipcMain.handle('db:checkPerson', async (event, cardId) => {
+  if (isSimulatedMode) {
+    loadMockDatabase();
+    return { ok: true, exists: !!mockDatabase[cardId] };
+  }
+
+  try {
+    const res = dll.bank_check_person(cardId);
+    return { ok: true, exists: res === 1 };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
+
+ipcMain.handle('db:createPerson', async (event, cardId, name, balance) => {
+  if (isSimulatedMode) {
+    loadMockDatabase();
+    mockDatabase[cardId] = {
+      card_id: cardId,
+      holder_name: name,
+      balance: parseFloat(balance),
+      is_active: 1
+    };
+    saveMockDatabase();
+    return { ok: true };
+  }
+
+  try {
+    const res = dll.bank_create_person(cardId, name, parseFloat(balance));
+    if (res === 1) {
+      return { ok: true };
+    }
+    return { ok: false, error: 'Failed to create person' };
   } catch (err) {
     return { ok: false, error: err.message };
   }
@@ -259,7 +299,7 @@ ipcMain.handle('db:transaction', async (event, fromCardId, toCardId, amount) => 
   }
 
   try {
-    const res = dll.bank_core_transaction(fromCardId, toCardId, parseFloat(amount));
+    const res = dll.bank_transaction(fromCardId, toCardId, parseFloat(amount));
     if (res === 1) {
       return { ok: true };
     }
@@ -277,8 +317,19 @@ ipcMain.handle('uart:open', async (event, portName) => {
   }
 
   try {
-    const res = dll.flipper_uart_open(portName || "COM3");
-    if (res === 1) {
+    if (isValidHandle(g_serialHandle)) {
+      dll.closeSerialPort(g_serialHandle);
+      g_serialHandle = null;
+    }
+
+    let fullPortName = portName || "COM3";
+    if (!fullPortName.startsWith("\\\\.\\")) {
+      fullPortName = "\\\\.\\" + fullPortName;
+    }
+
+    const handle = dll.openSerialPort(fullPortName);
+    if (isValidHandle(handle)) {
+      g_serialHandle = handle;
       uartOpened = true;
       return { ok: true, mode: 'native' };
     }
@@ -295,9 +346,12 @@ ipcMain.handle('uart:close', async (event) => {
   }
 
   try {
-    const res = dll.flipper_uart_close();
+    if (isValidHandle(g_serialHandle)) {
+      dll.closeSerialPort(g_serialHandle);
+      g_serialHandle = null;
+    }
     uartOpened = false;
-    return { ok: res === 1 };
+    return { ok: true };
   } catch (err) {
     return { ok: false, error: err.message };
   }
@@ -309,10 +363,8 @@ ipcMain.handle('uart:scanCard', async (event) => {
   }
 
   try {
-    const buf = Buffer.alloc(64);
-    const res = dll.flipper_uart_scan_card(buf, 64);
-    if (res === 1) {
-      const cardId = buf.toString().replace(/\u0000/g, '').trim();
+    const cardId = dll.flipper_read_card();
+    if (cardId && cardId.length > 0) {
       return { ok: true, card_id: cardId };
     }
     return { ok: false, error: 'Scan timed out or serial transmission error' };
@@ -340,7 +392,10 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     if (!isSimulatedMode && dll) {
       try {
-        dll.bank_core_close();
+        if (isValidHandle(g_serialHandle)) {
+          dll.closeSerialPort(g_serialHandle);
+        }
+        dll.bank_close();
       } catch (err) {
         console.error("Error closing dll:", err);
       }

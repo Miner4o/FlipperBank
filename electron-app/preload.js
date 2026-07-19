@@ -18,11 +18,14 @@ contextBridge.exposeInMainWorld('api', {
     init: (dbPath) => ipcRenderer.invoke('db:init', dbPath),
     getAccount: (cardId) => ipcRenderer.invoke('db:getAccount', cardId),
     transaction: (fromCardId, toCardId, amount) => ipcRenderer.invoke('db:transaction', fromCardId, toCardId, amount),
+    checkPerson: (cardId) => ipcRenderer.invoke('db:checkPerson', cardId),
+    createPerson: (cardId, name, balance) => ipcRenderer.invoke('db:createPerson', cardId, name, balance),
   },
   uart: {
     open: (portName) => ipcRenderer.invoke('uart:open', portName),
     close: () => ipcRenderer.invoke('uart:close'),
     scanCard: () => ipcRenderer.invoke('uart:scanCard'),
     isSimulated: () => ipcRenderer.invoke('uart:isSimulated'),
-  }
+  },
+  log: (msg) => ipcRenderer.send('log', msg)
 });

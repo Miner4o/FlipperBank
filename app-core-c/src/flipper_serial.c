@@ -1,31 +1,24 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdint.h>
 #include <windows.h>
-#include <time.h>
 #include <string.h>
 #include <stdbool.h>
-#include <math.h>
 #include "flipper_bank.h"
 
 #define logger printf
-
 static char globalResponse[8192];
 static HANDLE g_hSerial = NULL;
+static char globalCardUID[64] = {0};
 
 HANDLE openSerialPort(const char* portName) {
     HANDLE hSerial = CreateFileA(portName, GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
     if (hSerial == INVALID_HANDLE_VALUE) return NULL;
+    g_hSerial = hSerial;
 
     DCB dcb = { .DCBlength = sizeof(DCB) };
     if (GetCommState(hSerial, &dcb)) {
-        dcb.BaudRate = CBR_115200;
-        dcb.ByteSize = 8;
-        dcb.StopBits = ONESTOPBIT;
-        dcb.Parity = NOPARITY;
-        dcb.fOutxCtsFlow = FALSE;
-        dcb.fRtsControl = RTS_CONTROL_DISABLE;
-        dcb.fDtrControl = DTR_CONTROL_ENABLE;
+        dcb.BaudRate = CBR_115200; dcb.ByteSize = 8; dcb.StopBits = ONESTOPBIT; dcb.Parity = NOPARITY;
+        dcb.fOutxCtsFlow = FALSE; dcb.fRtsControl = RTS_CONTROL_DISABLE; dcb.fDtrControl = DTR_CONTROL_ENABLE;
         SetCommState(hSerial, &dcb);
     }
 
@@ -34,147 +27,142 @@ HANDLE openSerialPort(const char* portName) {
     EscapeCommFunction(hSerial, SETDTR);
     PurgeComm(hSerial, PURGE_RXCLEAR | PURGE_TXCLEAR);
 
+    DWORD written, read;
+    WriteFile(hSerial, "\r", 1, &written, NULL);
+    char junk, sync[4] = {0};
+    int attempts = 0;
+    while (ReadFile(hSerial, &junk, 1, &read, NULL) && read > 0 && ++attempts < 100) {
+        memmove(sync, sync + 1, 2);
+        sync[2] = junk;
+        if (strcmp(sync, ">: ") == 0) break;
+    }
     return hSerial;
 }
 
 const char* sendCommand(HANDLE hSerial, const char* command) {
     if (!hSerial || hSerial == INVALID_HANDLE_VALUE) return "ERROR: Invalid Handle";
 
-    // Clear any leftover data in the receive buffer
     char junk;
-    DWORD bytesRead;
-    while (ReadFile(hSerial, &junk, 1, &bytesRead, NULL) && bytesRead > 0) {}
+    DWORD bytesRead, written;
+    int purge_attempts = 0;
+    while (ReadFile(hSerial, &junk, 1, &bytesRead, NULL) && bytesRead > 0 && ++purge_attempts < 1000);
 
     char buffer[1024];
     snprintf(buffer, sizeof(buffer), "%s\r", command);
-    
-    DWORD written;
-    if (!WriteFile(hSerial, buffer, (DWORD)strlen(buffer), &written, NULL)) {
-        return "ERROR: Write failed";
-    }
+    WriteFile(hSerial, buffer, (DWORD)strlen(buffer), &written, NULL);
     
     memset(globalResponse, 0, sizeof(globalResponse));
-    int responseLen = 0;
-    int timeouts_count = 0;
-    
-    while (1) {
+    int len = 0, timeouts = 0;
+    while (len < (int)sizeof(globalResponse) - 1) {
         char ch;
-        if (ReadFile(hSerial, &ch, 1, &bytesRead, NULL)) {
-            if (bytesRead > 0) {
-                timeouts_count = 0;
-                if (responseLen < (int)sizeof(globalResponse) - 1) {
-                    globalResponse[responseLen++] = ch;
-                    globalResponse[responseLen] = '\0';
-                    
-                    // Check if the end of our current buffer has the prompt
-                    if (responseLen >= 3 && strcmp(&globalResponse[responseLen - 3], ">: ") == 0) {
-                        globalResponse[responseLen - 3] = '\0'; // Remove prompt
-                        break;
-                    }
-                }
-            } else {
-                // ReadFile timed out (100ms)
-                timeouts_count++;
-                if (timeouts_count > 60) { // 6 seconds total wait max
-                    break;
-                }
+        if (ReadFile(hSerial, &ch, 1, &bytesRead, NULL) && bytesRead > 0) {
+            timeouts = 0;
+            if (ch == '\r') ch = '\n';
+            globalResponse[len++] = ch;
+            globalResponse[len] = '\0';
+            if (len >= 3 && strcmp(&globalResponse[len - 3], ">: ") == 0) {
+                globalResponse[len - 3] = '\0';
+                break;
             }
         } else {
-            break;
+            if (++timeouts > 50) break;
         }
     }
-    
-    // Clean formatting for Windows
-    for (int i = 0; i < responseLen; i++) {
-        if (globalResponse[i] == '\r') globalResponse[i] = '\n';
-    }
-    
-    // Strip command echo at the start
-    char* cmd_echo = strstr(globalResponse, command);
-    if (cmd_echo != NULL) {
-        char* start = cmd_echo + strlen(command);
-        while (*start == '\r' || *start == '\n') {
-            start++;
-        }
+
+    char* echo = strstr(globalResponse, command);
+    if (echo) {
+        char* start = echo + strlen(command);
+        while (*start == '\r' || *start == '\n') start++;
         memmove(globalResponse, start, strlen(start) + 1);
     }
-    
     return globalResponse;
 }
 
-static char globalCardUID[64] = {0};
-
 bool flipper_init(void){
-    if (g_hSerial == NULL || g_hSerial == INVALID_HANDLE_VALUE) {
-        logger("Serial port not open yet. Proceeding initialization.\n");
-        return true;
-    }
+    if (g_hSerial == NULL || g_hSerial == INVALID_HANDLE_VALUE) return true;
     sendCommand(g_hSerial, "usb_nfc ping");
-    if (strstr(globalResponse, "PONG") != NULL) {
-        logger("Flipper initialized successfully.\n");
-        return true;
-    } else {
-        logger("Flipper not responding to ping.\n");
-        return false;
-    }
+    return strstr(globalResponse, "PONG") != NULL || strstr(globalResponse, "pong") != NULL;
 }
 
 void flipper_ping(void){
     while(1) {
         sendCommand(g_hSerial, "usb_nfc ping");
-        if (strstr(globalResponse, "PONG") == NULL) {
-            logger("Flipper not responding to ping.\n");
-        } else {
-            logger("Flipper is alive.\n");
-        }
         Sleep(1000);
     }
 }
 
 const char* flipper_read_card(void){
     sendCommand(g_hSerial, "usb_nfc scan");
-    if (strstr(globalResponse, "No card detected") != NULL) {
-        logger("No card detected.\n");
-        return "";
-    } else {
-        logger("Card detected.\n");
-    }
-    sendCommand(g_hSerial, "usb_nfc info");
+    if (strstr(globalResponse, "No card") != NULL || strstr(globalResponse, "No tag") != NULL || strstr(globalResponse, "fail") != NULL) return "";
     
-    char* uid_loc = NULL;
-    for (int i = 0; globalResponse[i] != '\0'; i++) {
-        if ((globalResponse[i] == 'u' || globalResponse[i] == 'U') &&
-            (globalResponse[i+1] == 'i' || globalResponse[i+1] == 'I') &&
-            (globalResponse[i+2] == 'd' || globalResponse[i+2] == 'D')) {
-            uid_loc = &globalResponse[i];
-            break;
-        }
-    }
+    // Attempt to read NDEF record first
+    sendCommand(g_hSerial, "usb_nfc ndef");
+    char hex_str[256] = {0};
     
-    if (uid_loc != NULL) {
-        char* src = uid_loc + 3;
-        while (*src == ' ' || *src == ':' || *src == '\t') {
-            src++;
-        }
+    // Search for "Text:" or "Payload:" label in the response
+    char* text_loc = strstr(globalResponse, "Text:");
+    if (!text_loc) text_loc = strstr(globalResponse, "text:");
+    if (!text_loc) text_loc = strstr(globalResponse, "Payload:");
+    if (!text_loc) text_loc = strstr(globalResponse, "payload:");
+    
+    if (text_loc) {
+        char* p = strchr(text_loc, ':') + 1;
+        while (*p == ' ' || *p == '\t') p++;
         int idx = 0;
-        while (*src != '\0' && *src != '\r' && *src != '\n' && idx < 63) {
-            globalCardUID[idx] = *src;
-            idx++;
-            src++;
+        while (idx < 255 && ((*p >= '0' && *p <= '9') || (*p >= 'a' && *p <= 'f') || (*p >= 'A' && *p <= 'F'))) {
+            hex_str[idx++] = *p++;
         }
-        globalCardUID[idx] = '\0';
-        
-        while (idx > 0 && globalCardUID[idx - 1] == ' ') {
-            globalCardUID[idx - 1] = '\0';
-            idx--;
-        }
-        
-        logger("Card UID: %s\n", globalCardUID);
-        return globalCardUID;
+        hex_str[idx] = '\0';
     } else {
-        logger("Failed to get card info.\n");
-        return "";
+        // Fallback: search for any hexadecimal sequence of length >= 32
+        char* p = globalResponse;
+        while (*p) {
+            int len = 0;
+            char* start = p;
+            while ((*p >= '0' && *p <= '9') || (*p >= 'a' && *p <= 'f') || (*p >= 'A' && *p <= 'F')) {
+                len++;
+                p++;
+            }
+            if (len >= 32 && len < 256) {
+                strncpy(hex_str, start, len);
+                hex_str[len] = '\0';
+                break;
+            }
+            if (*p) p++;
+        }
     }
+    
+    if (strlen(hex_str) >= 32) {
+        char decrypted_card_id[128] = {0};
+        if (aes_decrypt(hex_str, decrypted_card_id, "Miner4o")) {
+            // Trim any whitespace/newlines from decrypted ID
+            int len = (int)strlen(decrypted_card_id);
+            while (len > 0 && (decrypted_card_id[len-1] == ' ' || decrypted_card_id[len-1] == '\t' || decrypted_card_id[len-1] == '\r' || decrypted_card_id[len-1] == '\n')) {
+                decrypted_card_id[--len] = '\0';
+            }
+            strcpy(globalCardUID, decrypted_card_id);
+            return globalCardUID;
+        }
+    }
+    
+    // Fallback: read physical card UID
+    sendCommand(g_hSerial, "usb_nfc info");
+    char* uid_loc = strstr(globalResponse, "UID");
+    if (uid_loc != NULL) {
+        uid_loc += 3;
+        while (*uid_loc == ':' || *uid_loc == ' ' || *uid_loc == '\t') {
+            uid_loc++;
+        }
+        strcpy(globalCardUID, uid_loc);
+        char* end = strpbrk(globalCardUID, "\r\n");
+        if (end) *end = '\0';
+        int len = strlen(globalCardUID);
+        while (len > 0 && (globalCardUID[len-1] == ' ' || globalCardUID[len-1] == '\t' || globalCardUID[len-1] == '\r' || globalCardUID[len-1] == '\n')) {
+            globalCardUID[--len] = '\0';
+        }
+        return globalCardUID;
+    }
+    return "";
 }
 
 const char* flipper_dump(void){
@@ -192,81 +180,16 @@ const char* flipper_read(void){
     return globalResponse;
 }
 
-BANK_CORE_API int flipper_uart_open(const char* portName) {
-    if (g_hSerial && g_hSerial != INVALID_HANDLE_VALUE) {
-        closeSerialPort(g_hSerial);
-    }
-    
-    char fullPortName[64];
-    if (strncmp(portName, "\\\\.\\", 4) == 0) {
-        snprintf(fullPortName, sizeof(fullPortName), "%s", portName);
-    } else {
-        snprintf(fullPortName, sizeof(fullPortName), "\\\\.\\%s", portName);
-    }
-    
-    g_hSerial = openSerialPort(fullPortName);
-    if (g_hSerial == NULL || g_hSerial == INVALID_HANDLE_VALUE) {
-        logger("Failed to open serial port %s\n", portName);
-        return 0;
-    }
-    
-    logger("Serial port %s opened successfully\n", portName);
-    
-    // Clear and sync prompt
-    DWORD bytesWritten;
-    WriteFile(g_hSerial, "\r", 1, &bytesWritten, NULL);
-    
-    char junk;
-    DWORD bytesRead;
-    char syncBuf[4] = {0};
-    int sync_timeouts = 0;
-    while (ReadFile(g_hSerial, &junk, 1, &bytesRead, NULL)) {
-        if (bytesRead > 0) {
-            sync_timeouts = 0;
-            syncBuf[0] = syncBuf[1];
-            syncBuf[1] = syncBuf[2];
-            syncBuf[2] = junk;
-            syncBuf[3] = '\0';
-            if (strcmp(syncBuf, ">: ") == 0) {
-                break;
-            }
-        } else {
-            sync_timeouts++;
-            if (sync_timeouts > 30) {
-                break;
-            }
-        }
-    }
-    
-    return 1;
-}
-
-BANK_CORE_API int flipper_uart_close(void) {
-    if (g_hSerial && g_hSerial != INVALID_HANDLE_VALUE) {
-        closeSerialPort(g_hSerial);
-        return 1;
-    }
-    return 0;
-}
-
-BANK_CORE_API int flipper_uart_scan_card(char* out_card_id, int max_len) {
-    if (!g_hSerial || g_hSerial == INVALID_HANDLE_VALUE) {
-        return 0;
-    }
-    const char* uid = flipper_read_card();
-    if (uid && strlen(uid) > 0) {
-        snprintf(out_card_id, max_len, "%s", uid);
-        return 1;
-    }
-    return 0;
+const char* flipper_write(const char* data){
+    char command[1024];
+    snprintf(command, sizeof(command), "usb_nfc write text %s", data);
+    sendCommand(g_hSerial, command);
+    return globalResponse;
 }
 
 void closeSerialPort(HANDLE hSerial) {
     if (hSerial != NULL && hSerial != INVALID_HANDLE_VALUE) {
-        logger("closeSerialPort called.\n");
         CloseHandle(hSerial);
-        if (hSerial == g_hSerial) {
-            g_hSerial = NULL;
-        }
+        if (hSerial == g_hSerial) g_hSerial = NULL;
     }
 }

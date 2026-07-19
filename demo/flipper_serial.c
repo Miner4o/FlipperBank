@@ -189,11 +189,13 @@ int main(int argc, char* argv[]) {
             printf("1. Ping (usb_nfc ping)\n");
             printf("2. Scan for cards (usb_nfc scan)\n");
             printf("3. Get card info (usb_nfc info)\n");
-            printf("4. Read card to file (usb_nfc read /ext/nfc/card.nfc)\n");
-            printf("5. Dump saved card (storage read /ext/nfc/card.nfc)\n");
-            printf("6. Check NDEF (usb_nfc ndef)\n");
-            printf("7. Exit\n");
-            printf("Select an option (1-7): ");
+            printf("4. Read card to file (usb_nfc read /ext/nfc/card_monkarda.nfc)\n");
+            printf("5. Check NDEF (usb_nfc ndef)\n");
+            printf("6. Write file to blank card (usb_nfc write /ext/nfc/card_monkarda.nfc)\n");
+            printf("7. Write custom text to card (usb_nfc write text <text>)\n");
+            printf("8. Dump saved card (storage read /ext/nfc/card_monkarda.nfc)\n");
+            printf("9. Exit\n");
+            printf("Select an option (1-9): ");
             
             if (fgets(choice, sizeof(choice), stdin) == NULL) {
                 break;
@@ -214,23 +216,46 @@ int main(int argc, char* argv[]) {
                     send_command_and_print_response(hComm, "usb_nfc info");
                     break;
                 case 4:
-                    printf("\n[Executing: usb_nfc read /ext/nfc/card.nfc]\n");
-                    send_command_and_print_response(hComm, "usb_nfc read /ext/nfc/card.nfc");
+                    printf("\n[Executing: usb_nfc read /ext/nfc/card_monkarda.nfc]\n");
+                    send_command_and_print_response(hComm, "usb_nfc read /ext/nfc/card_monkarda.nfc");
                     break;
                 case 5:
-                    printf("\n[Executing: storage read /ext/nfc/card.nfc]\n");
-                    send_command_and_print_response(hComm, "storage read /ext/nfc/card.nfc");
-                    break;
-                case 6:
                     printf("\n[Executing: usb_nfc ndef]\n");
                     send_command_and_print_response(hComm, "usb_nfc ndef");
                     break;
-                case 7:
+                case 6:
+                    printf("\n[Executing: usb_nfc write /ext/nfc/card_monkarda.nfc]\n");
+                    send_command_and_print_response(hComm, "usb_nfc write /ext/nfc/card_monkarda.nfc");
+                    break;
+                case 7: {
+                    char text_to_write[256];
+                    printf("Enter text to write: ");
+                    if (fgets(text_to_write, sizeof(text_to_write), stdin) != NULL) {
+                        size_t l = strlen(text_to_write);
+                        if (l > 0 && text_to_write[l - 1] == '\n') {
+                            text_to_write[l - 1] = '\0';
+                            l--;
+                        }
+                        if (l > 0 && text_to_write[l - 1] == '\r') {
+                            text_to_write[l - 1] = '\0';
+                        }
+                        char full_cmd[512];
+                        snprintf(full_cmd, sizeof(full_cmd), "usb_nfc write text %s", text_to_write);
+                        printf("\n[Executing: %s]\n", full_cmd);
+                        send_command_and_print_response(hComm, full_cmd);
+                    }
+                    break;
+                }
+                case 8:
+                    printf("\n[Executing: storage read /ext/nfc/card_monkarda.nfc]\n");
+                    send_command_and_print_response(hComm, "storage read /ext/nfc/card_monkarda.nfc");
+                    break;
+                case 9:
                     printf("Exiting.\n");
                     CloseHandle(hComm);
                     return 0;
                 default:
-                    printf("Invalid option. Please enter a number between 1 and 7.\n");
+                    printf("Invalid option. Please enter a number between 1 and 9.\n");
                     break;
             }
         }

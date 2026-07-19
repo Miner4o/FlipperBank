@@ -154,6 +154,14 @@ html, body, #app, #content, .page, .terminal-log {
   color: var(--retro-dark);
 }
 
+.connection-status-wrapper {
+  margin-left: 24px;
+  position: relative;
+  z-index: 5; /* Sit on top of win-hotspot */
+  -webkit-app-region: no-drag !important;
+  pointer-events: auto !important;
+}
+
 /* Status indicator (COM Connection Status) */
 #connection-status {
   display: flex;
@@ -164,8 +172,12 @@ html, body, #app, #content, .page, .terminal-log {
   padding: 6px 12px;
   border: 2px solid var(--retro-dark);
   box-shadow: 2px 2px 0px var(--retro-gray-md);
-  margin-left: 24px;
   font-size: 16px;
+  cursor: pointer;
+  outline: none;
+  font-family: inherit;
+  -webkit-app-region: no-drag !important;
+  pointer-events: auto !important;
 }
 
 .status-dot {
